@@ -1,0 +1,11 @@
+2025-08-18 07:27:17,278 - app - INFO - 应用启动，根目录设置为: D:\PycharmProjects\file
+2025-08-18 07:27:17,995 - app - INFO - 应用启动，根目录设置为: D:\PycharmProjects\file
+2025-08-18 07:27:20,205 - app - INFO - 访问主页
+2025-08-18 07:27:20,385 - app - INFO - 列出目录内容: D:\PycharmProjects\file\
+2025-08-18 07:27:21,774 - app - INFO - 列出目录内容: D:\PycharmProjects\file\.idea
+2025-08-18 07:27:25,434 - app - INFO - 列出目录内容: D:\PycharmProjects\file\
+2025-08-18 07:27:30,398 - app - INFO - 尝试下载文件: D:\PycharmProjects\file\app.py
+2025-08-18 07:27:30,398 - app - INFO - 下载文件: app.py, 大小: 19528 字节
+2025-08-18 07:27:36,059 - app - INFO - 列出目录内容: D:\PycharmProjects\file\
+2025-08-18 07:27:37,868 - app - INFO - 列出目录内容: D:\PycharmProjects\file\__pycache__
+2025-08-18 07:27:39,503 - app - INFO - 列出目录内容: D:\PycharmProjects\file\static
