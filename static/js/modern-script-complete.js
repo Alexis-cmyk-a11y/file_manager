@@ -32,6 +32,8 @@ const cancelMoveCopyBtn = document.getElementById('cancel-move-copy-btn');
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM内容加载完成，开始初始化");
+    
     // 上传按钮点击事件
     uploadBtn.addEventListener('click', () => {
         fileUploadInput.click();
@@ -67,12 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // 添加模态框拖动功能
     makeModalsDraggable();
     
+    // 初始化面包屑导航事件处理
+    initBreadcrumbEvents();
+    console.log("面包屑导航事件处理已初始化");
+    
     // 页面加载时自动加载文件列表和更新面包屑导航
     loadFileList();
     updateBreadcrumb();
     
     // 显示欢迎通知
     showNotification('欢迎使用文件管理系统', 'info');
+    
+    console.log("页面初始化完成");
 });
 
 // 添加键盘事件监听器
@@ -161,27 +169,38 @@ function makeModalsDraggable() {
 
 // 加载文件列表
 async function loadFileList() {
+    console.log("开始加载文件列表，当前路径：", currentPath);
     try {
         showLoading(true);
         showStatus('正在加载...', 'info');
         
-        const response = await fetch(`/api/list?path=${encodeURIComponent(currentPath)}`);
+        const url = `/api/list?path=${encodeURIComponent(currentPath)}`;
+        console.log("请求URL：", url);
+        
+        const response = await fetch(url);
+        console.log("收到响应：", response.status, response.statusText);
+        
         const data = await response.json();
+        console.log("响应数据：", data);
         
         if (response.ok) {
+            console.log("加载成功，渲染文件列表");
             renderFileList(data.items);
             showStatus(`已加载 ${data.items.length} 个项目`, 'success');
             showNotification(`已加载 ${data.items.length} 个项目`, 'success');
         } else {
+            console.error("加载失败：", data.message);
             showStatus(data.message, 'error');
             showNotification(data.message, 'error');
         }
     } catch (error) {
+        console.error("加载文件列表时发生错误：", error);
         const errorMsg = '加载文件列表时发生错误: ' + error.message;
         showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
+        console.log("文件列表加载完成");
     }
 }
 
@@ -350,49 +369,82 @@ function addFileListEventListeners() {
     });
 }
 
+// 初始化面包屑导航事件处理
+function initBreadcrumbEvents() {
+    // 使用事件委托，将点击事件处理程序绑定到面包屑导航的父元素上
+    breadcrumbElement.addEventListener('click', function(e) {
+        // 检查点击的是否是链接元素
+        if (e.target.tagName === 'A' || e.target.parentElement.tagName === 'A') {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止事件冒泡
+            
+            // 获取被点击的链接元素
+            const link = e.target.tagName === 'A' ? e.target : e.target.parentElement;
+            const clickedPath = link.getAttribute('data-path');
+            
+            console.log("面包屑点击事件触发，路径：", clickedPath);
+            
+            // 更新当前路径并加载文件列表
+            currentPath = clickedPath;
+            console.log("设置当前路径为：", currentPath);
+            loadFileList();
+            updateBreadcrumb();
+        }
+    });
+    
+    console.log("面包屑导航事件处理程序已初始化");
+}
+
 // 更新面包屑导航
 function updateBreadcrumb() {
+    console.log("开始更新面包屑导航，当前路径：", currentPath);
     breadcrumbElement.innerHTML = '';
     
     // 添加根目录
     const homeItem = document.createElement('li');
-    homeItem.innerHTML = `<a href="#" data-path=""><i class="fas fa-home"></i> 首页</a>`;
-    homeItem.addEventListener('click', (e) => {
-        e.preventDefault();
-        currentPath = '';
-        loadFileList();
-        updateBreadcrumb();
-    });
+    homeItem.className = 'breadcrumb-item'; // 添加正确的CSS类
+    const homeLink = document.createElement('a');
+    homeLink.href = "#";
+    homeLink.setAttribute('data-path', '');
+    homeLink.innerHTML = `<i class="fas fa-home"></i> 首页`;
+    homeItem.appendChild(homeLink);
     breadcrumbElement.appendChild(homeItem);
     
     // 如果当前路径不是根目录，添加路径部分
     if (currentPath) {
         const parts = currentPath.split('/');
-        let path = '';
+        let accumulatedPath = '';
+        
+        console.log("路径部分：", parts);
         
         parts.forEach((part, index) => {
-            path += (index > 0 ? '/' : '') + part;
+            // 正确构建累积路径
+            accumulatedPath += (accumulatedPath ? '/' : '') + part;
+            console.log(`构建路径部分 ${index + 1}/${parts.length}:`, part, "累积路径:", accumulatedPath);
             
             const item = document.createElement('li');
+            item.className = 'breadcrumb-item'; // 添加正确的CSS类
             
             if (index === parts.length - 1) {
                 // 最后一项不可点击
                 item.textContent = part;
                 item.classList.add('active');
+                console.log("添加最后一项（不可点击）:", part);
             } else {
                 // 中间项可点击
-                item.innerHTML = `<a href="#" data-path="${path}">${part}</a>`;
-                item.querySelector('a').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    currentPath = path;
-                    loadFileList();
-                    updateBreadcrumb();
-                });
+                const link = document.createElement('a');
+                link.href = "#";
+                link.setAttribute('data-path', accumulatedPath);
+                link.textContent = part;
+                console.log("添加可点击项:", part, "路径:", accumulatedPath);
+                item.appendChild(link);
             }
             
             breadcrumbElement.appendChild(item);
         });
     }
+    
+    console.log("面包屑导航更新完成");
 }
 
 // 上传文件
