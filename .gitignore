@@ -2,3 +2,5 @@
 file_manager.log
 venv/
 .idea/
+build/
+dist

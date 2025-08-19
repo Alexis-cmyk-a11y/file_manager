@@ -3,7 +3,7 @@ import os
 # 应用配置
 class Config:
     # 根目录配置（使用当前目录）
-    ROOT_DIR = 'D:\\PycharmProjects\\file'
+    ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
     # 上传文件大小限制（单位：MB）
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024 * 1024
