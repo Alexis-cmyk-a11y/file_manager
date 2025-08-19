@@ -5,7 +5,58 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, abort
 from werkzeug.utils import secure_filename
-from config import Config
+import os
+import sys
+import importlib.util
+import logging
+
+# 配置日志记录
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='file_manager.log'
+)
+logger = logging.getLogger(__name__)
+
+def load_config_from_file(config_path):
+    """从指定路径加载config.py文件"""
+    try:
+        spec = importlib.util.spec_from_file_location("external_config", config_path)
+        config_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config_module)
+        return config_module.Config
+    except Exception as e:
+        logger.error(f"加载配置文件失败: {str(e)}")
+        return None
+
+def get_config():
+    # 获取当前可执行文件所在目录
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 尝试从外部导入config.py
+    config_path = os.path.join(base_dir, 'config.py')
+    logger.info(f"尝试加载配置文件: {config_path}")
+    
+    if os.path.exists(config_path):
+        config = load_config_from_file(config_path)
+        if config:
+            logger.info("成功加载外部配置文件")
+            return config
+    
+    # 提供默认配置
+    logger.warning("使用默认配置")
+    class DefaultConfig:
+        FILE_OPERATION_PERMISSION = 'read_write'
+        SERVER_HOST = '0.0.0.0'
+        SERVER_PORT = 5000
+        LOG_FILE = 'file_manager.log'
+        LOG_LEVEL = 'INFO'
+    return DefaultConfig
+
+Config = get_config()
 
 # 初始化Flask应用
 app = Flask(__name__)
