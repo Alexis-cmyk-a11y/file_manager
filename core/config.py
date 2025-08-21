@@ -1,17 +1,23 @@
+"""
+文件管理系统配置模块
+提供应用的所有配置选项
+"""
+
 import os
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
 
-# 应用配置
 class Config:
+    """应用配置类"""
+    
     # 根目录配置（使用当前目录）
-    ROOT_DIR = os.getenv('ROOT_DIR', os.path.dirname(os.path.abspath(__file__)))
+    ROOT_DIR = os.getenv('ROOT_DIR', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     # 如果环境变量设置的是无效路径，则使用当前目录
     if ROOT_DIR == '/path/to/your/files' or not os.path.exists(ROOT_DIR):
-        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # 上传文件大小限制（单位：字节，默认50GB）
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 50 * 1024 * 1024 * 1024))
@@ -20,10 +26,13 @@ class Config:
     ALLOWED_EXTENSIONS = set()
 
     # 禁止的文件扩展名
-    FORBIDDEN_EXTENSIONS = {}
-
+    FORBIDDEN_EXTENSIONS = {'.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js', '.jar'}
+    
+    # 是否允许上传可执行文件
+    ALLOW_EXECUTABLE_FILES = os.getenv('ALLOW_EXECUTABLE_FILES', 'false').lower() == 'true'
+    
     # 日志配置
-    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')  # 可选：DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FORMAT = os.getenv('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     LOG_FILE = os.getenv('LOG_FILE', 'file_manager.log')
     LOG_MAX_SIZE = int(os.getenv('LOG_MAX_SIZE', 10 * 1024 * 1024))  # 10MB
@@ -31,8 +40,8 @@ class Config:
 
     # 界面配置
     APP_NAME = os.getenv('APP_NAME', "文件管理系统")
-    THEME_COLOR = os.getenv('THEME_COLOR', "#4a6fa5")  # 主题颜色
-    SECONDARY_COLOR = os.getenv('SECONDARY_COLOR', "#6c8ebf")  # 次要颜色
+    THEME_COLOR = os.getenv('THEME_COLOR', "#4a6fa5")
+    SECONDARY_COLOR = os.getenv('SECONDARY_COLOR', "#6c8ebf")
 
     # 安全配置
     SECRET_KEY = os.getenv('SECRET_KEY', os.urandom(24).hex())
@@ -50,24 +59,24 @@ class Config:
     SESSION_TIMEOUT = int(os.getenv('SESSION_TIMEOUT', 3600))  # 会话超时时间(秒)
 
     # Flask服务器配置
-    SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')  # 监听地址
-    SERVER_PORT = int(os.getenv('SERVER_PORT', 8888))  # 监听端口
-    DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'  # 调试模式开关
-    TEMPLATES_AUTO_RELOAD = os.getenv('TEMPLATES_AUTO_RELOAD', 'false').lower() == 'true'  # 模板自动重载
+    SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')
+    SERVER_PORT = int(os.getenv('SERVER_PORT', 8888))
+    DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+    TEMPLATES_AUTO_RELOAD = os.getenv('TEMPLATES_AUTO_RELOAD', 'false').lower() == 'true'
 
     # 静态文件配置
-    STATIC_VERSION = os.getenv('STATIC_VERSION', '1.0.0')  # 静态资源版本号
-    SEND_FILE_MAX_AGE_DEFAULT = int(os.getenv('SEND_FILE_MAX_AGE_DEFAULT', 3600))  # 静态文件缓存时间(秒)
-    STATIC_COMPRESS = os.getenv('STATIC_COMPRESS', 'true').lower() == 'true'  # 是否启用静态资源压缩
+    STATIC_VERSION = os.getenv('STATIC_VERSION', '1.0.0')
+    SEND_FILE_MAX_AGE_DEFAULT = int(os.getenv('SEND_FILE_MAX_AGE_DEFAULT', 3600))
+    STATIC_COMPRESS = os.getenv('STATIC_COMPRESS', 'true').lower() == 'true'
 
     # 前端资源配置
     FRONTEND_CONFIG = {
         'app_name': os.getenv('APP_NAME', '文件管理系统'),
-        'default_view': os.getenv('DEFAULT_VIEW', 'list'),  # 默认视图(list/grid)
-        'page_size': int(os.getenv('PAGE_SIZE', 20)),  # 每页显示文件数
-        'show_hidden': os.getenv('SHOW_HIDDEN', 'false').lower() == 'true',  # 是否显示隐藏文件
-        'enable_drag_drop': os.getenv('ENABLE_DRAG_DROP', 'true').lower() == 'true',  # 启用拖拽上传
-        'enable_preview': os.getenv('ENABLE_PREVIEW', 'true').lower() == 'true'  # 启用文件预览
+        'default_view': os.getenv('DEFAULT_VIEW', 'list'),
+        'page_size': int(os.getenv('PAGE_SIZE', 20)),
+        'show_hidden': os.getenv('SHOW_HIDDEN', 'false').lower() == 'true',
+        'enable_drag_drop': os.getenv('ENABLE_DRAG_DROP', 'true').lower() == 'true',
+        'enable_preview': os.getenv('ENABLE_PREVIEW', 'true').lower() == 'true'
     }
 
     # 细粒度权限控制
@@ -81,7 +90,7 @@ class Config:
     }
 
     # 开发/生产环境配置
-    ENV = os.getenv('ENV', 'production')  # 当前环境(development/production)
+    ENV = os.getenv('ENV', 'production')
     
     @classmethod
     def is_production(cls):
@@ -98,3 +107,31 @@ class Config:
             self.TEMPLATES_AUTO_RELOAD = False
             self.STATIC_COMPRESS = True
             self.LOG_LEVEL = 'WARNING'
+        
+        # 动态配置文件类型限制
+        self._setup_file_extensions()
+    
+    def _setup_file_extensions(self):
+        """动态设置文件扩展名限制"""
+        # 从环境变量读取禁止的文件扩展名
+        forbidden_env = os.getenv('FORBIDDEN_EXTENSIONS', '')
+        if forbidden_env:
+            forbidden_list = [ext.strip() for ext in forbidden_env.split(',') if ext.strip()]
+            self.FORBIDDEN_EXTENSIONS = set(forbidden_list)
+        
+        # 从环境变量读取允许的文件扩展名
+        allowed_env = os.getenv('ALLOWED_EXTENSIONS', '')
+        if allowed_env:
+            allowed_list = [ext.strip() for ext in allowed_env.split(',') if ext.strip()]
+            self.ALLOWED_EXTENSIONS = set(allowed_list)
+        
+        # 根据ALLOW_EXECUTABLE_FILES设置调整禁止列表
+        if not self.ALLOW_EXECUTABLE_FILES:
+            # 如果不允许可执行文件，添加常见的可执行文件扩展名
+            executable_exts = {'.exe', '.msi', '.app', '.dmg', '.deb', '.rpm'}
+            self.FORBIDDEN_EXTENSIONS.update(executable_exts)
+        else:
+            # 如果允许可执行文件，从禁止列表中移除.exe
+            self.FORBIDDEN_EXTENSIONS.discard('.exe')
+            self.FORBIDDEN_EXTENSIONS.discard('.msi')
+            self.FORBIDDEN_EXTENSIONS.discard('.app')
