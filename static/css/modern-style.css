@@ -1,27 +1,29 @@
-/* 现代化文件管理系统样式 - 增强版 */
+/* 现代化文件管理系统样式 - 超美版 */
 :root {
-    --primary-color: #5a67d8;
-    --primary-hover: #4c51bf;
-    --primary-light: rgba(90, 103, 216, 0.1);
+    --primary-color: #667eea;
+    --primary-hover: #5a67d8;
+    --primary-light: rgba(102, 126, 234, 0.1);
     --secondary-color: #718096;
-    --success-color: #38a169;
-    --danger-color: #e53e3e;
-    --warning-color: #dd6b20;
-    --info-color: #3182ce;
+    --success-color: #48bb78;
+    --danger-color: #f56565;
+    --warning-color: #ed8936;
+    --info-color: #4299e1;
     --light-color: #f7fafc;
     --dark-color: #2d3748;
-    --body-bg: #f0f4f8;
-    --card-bg: #f8fafc;
-    --border-color: #e2e8f0;
+    --body-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --border-color: rgba(226, 232, 240, 0.8);
     --text-primary: #2d3748;
     --text-secondary: #4a5568;
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
-    --shadow: 0 5px 15px rgba(0,0,0,0.08);
-    --shadow-lg: 0 10px 25px rgba(0,0,0,0.12);
-    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    --border-radius: 0.625rem;
-    --border-radius-sm: 0.375rem;
-    --border-radius-lg: 1.25rem;
+    --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.15);
+    --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --border-radius: 1rem;
+    --border-radius-sm: 0.5rem;
+    --border-radius-lg: 1.5rem;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
 }
 
 /* 全局样式 */
@@ -33,75 +35,131 @@
 
 body {
     font-family: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--body-bg);
+    background: var(--body-bg);
+    background-attachment: fixed;
     color: var(--text-primary);
     line-height: 1.8;
     font-size: 17px;
     letter-spacing: 0.015em;
     font-weight: 400;
+    min-height: 100vh;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 ::selection {
-    background-color: var(--primary-light);
-    color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
+    color: white;
 }
 
 .container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    max-width: 1280px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 2.5rem 3rem;
-    gap: 2.5rem;
+    padding: 3rem 4rem;
+    gap: 3rem;
+    position: relative;
 }
 
 /* 头部样式 */
 header {
-    padding-bottom: 1.5rem;
-    margin-bottom: 1rem;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     position: relative;
+    text-align: center;
 }
 
-header::after {
+header::before {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border-color) 20%, var(--border-color) 80%, transparent);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    border-radius: 2px;
 }
 
 header h1 {
-    margin: 0;
-    color: var(--dark-color);
-    font-weight: 800;
-    font-size: 2.5rem;
-    background: linear-gradient(135deg, var(--primary-color), #8e54e9);
+    margin: 0 auto;
+    color: white;
+    font-weight: 900;
+    font-size: 3.5rem;
+    background: linear-gradient(135deg, #ffffff, #f0f4ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-fill-color: transparent;
     letter-spacing: -0.03em;
     position: relative;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
 }
 
 header h1::before {
-    content: '';
+    content: '📁';
     position: absolute;
-    width: 40px;
-    height: 40px;
-    background: radial-gradient(circle, var(--primary-light), transparent 70%);
-    border-radius: 50%;
-    z-index: -1;
-    top: -10px;
-    left: -15px;
+    top: -20px;
+    left: -40px;
+    font-size: 2rem;
     opacity: 0.8;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* 头部装饰元素 */
+.header-decoration {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 1rem;
+    opacity: 0.6;
+}
+
+.decoration-circle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.decoration-circle:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.decoration-circle:nth-child(3) {
+    animation-delay: 1s;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 1; }
 }
 
 /* 主内容区域 */
@@ -110,34 +168,38 @@ main {
 }
 
 .file-explorer {
-    background-color: var(--card-bg);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
     transition: var(--transition);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--glass-border);
+    position: relative;
+}
+
+.file-explorer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), #764ba2, #f093fb);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
 .file-explorer:hover {
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
 }
 
 /* 面包屑导航 */
 .breadcrumb-container {
-    padding: 1.25rem 1.75rem;
-    background-color: var(--light-color);
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
     border-bottom: 1px solid var(--border-color);
     position: relative;
-}
-
-.breadcrumb-container::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border-color) 20%, var(--border-color) 80%, transparent);
 }
 
 .breadcrumb {
@@ -145,7 +207,7 @@ main {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     margin: 0;
     padding: 0;
 }
@@ -157,10 +219,11 @@ main {
 }
 
 .breadcrumb-item:not(:last-child)::after {
-    content: "/";
-    margin-left: 0.75rem;
-    color: var(--secondary-color);
-    font-weight: 300;
+    content: "›";
+    margin-left: 1rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.2rem;
 }
 
 .breadcrumb-item a {
@@ -168,57 +231,41 @@ main {
     text-decoration: none;
     font-weight: 600;
     transition: var(--transition);
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 1rem;
     border-radius: var(--border-radius-sm);
     display: flex;
     align-items: center;
     gap: 0.5rem;
     position: relative;
     overflow: hidden;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid transparent;
+}
+
+.breadcrumb-item a:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .breadcrumb-item a i {
     font-size: 1.1rem;
 }
 
-.breadcrumb-item a::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: var(--primary-color);
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.3s ease;
-}
-
-.breadcrumb-item a:hover {
-    background-color: var(--primary-light);
-}
-
-.breadcrumb-item a:hover::before {
-    transform: scaleX(1);
-    transform-origin: left;
-}
-
-.breadcrumb-item:first-child a {
-    padding-left: 0;
-}
-
 /* 操作按钮 */
 .actions {
-    padding: 1rem 1.5rem;
-    background-color: var(--light-color);
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.8));
     border-bottom: 1px solid var(--border-color);
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .action-btn {
-    padding: 0.6rem 1.2rem;
-    background-color: var(--primary-color);
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
     color: white;
     border: none;
     border-radius: var(--border-radius);
@@ -226,48 +273,43 @@ main {
     transition: var(--transition);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .action-btn::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
+    left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
 }
 
 .action-btn:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    background: linear-gradient(135deg, var(--primary-hover), #5a67d8);
 }
 
 .action-btn:hover::before {
-    transform: translateX(0);
+    left: 100%;
 }
 
 .action-btn:active {
-    transform: translateY(0);
-}
-
-.action-btn:disabled {
-    background-color: var(--secondary-color);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    transform: translateY(-1px);
 }
 
 .action-btn i {
-    font-size: 1rem;
+    font-size: 1.1rem;
 }
 
 /* 文件列表 */
@@ -284,14 +326,14 @@ main {
 
 .file-list th,
 .file-list td {
-    padding: 1.125rem 1.5rem;
+    padding: 1.25rem 1.75rem;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
 
 .file-list th {
-    background-color: var(--light-color);
-    font-weight: 600;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    font-weight: 700;
     color: var(--dark-color);
     position: sticky;
     top: 0;
@@ -299,6 +341,7 @@ main {
     font-size: 0.95rem;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    backdrop-filter: blur(10px);
 }
 
 .file-list th:first-child {
@@ -319,19 +362,19 @@ main {
 }
 
 .file-list tr:hover {
-    background-color: rgba(90, 103, 216, 0.08);
-    transform: translateX(4px);
-    transition: all 0.3s ease;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+    transform: translateX(6px);
 }
 
 .file-list tr::after {
     content: '';
     position: absolute;
     left: 0;
-    width: 3px;
+    width: 4px;
     height: 0;
-    background-color: var(--primary-color);
-    transition: height 0.3s ease;
+    background: linear-gradient(180deg, var(--primary-color), #764ba2);
+    transition: height 0.4s ease;
+    border-radius: 0 2px 2px 0;
 }
 
 .file-list tr:hover::after {
@@ -353,13 +396,21 @@ main {
 }
 
 .file-icon {
-    margin-right: 0.75rem;
-    font-size: 1.2rem;
-    width: 24px;
-    height: 24px;
+    margin-right: 1rem;
+    font-size: 1.4rem;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.file-list tr:hover .file-icon {
+    background: rgba(102, 126, 234, 0.2);
+    transform: scale(1.1);
 }
 
 .folder-icon {
@@ -372,9 +423,9 @@ main {
     text-decoration: none;
     display: flex;
     align-items: center;
-    font-weight: 500;
+    font-weight: 600;
     transition: var(--transition);
-    padding: 0.375rem 0;
+    padding: 0.5rem 0;
 }
 
 .file-name:hover {
@@ -388,11 +439,11 @@ main {
 .file-name:hover span::after {
     content: '';
     position: absolute;
-    bottom: -2px;
+    bottom: -3px;
     left: 0;
     width: 100%;
     height: 2px;
-    background-color: var(--primary-color);
+    background: linear-gradient(90deg, var(--primary-color), #764ba2);
     transform: scaleX(1);
     transform-origin: left;
     transition: transform 0.3s ease;
@@ -400,7 +451,7 @@ main {
 
 .file-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
     opacity: 0;
     transition: var(--transition);
 }
@@ -410,45 +461,69 @@ tr:hover .file-actions {
 }
 
 .file-action-btn {
-    background: none;
-    border: none;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid transparent;
     color: var(--primary-color);
     cursor: pointer;
     font-size: 0.9rem;
-    padding: 0.375rem 0.625rem;
+    padding: 0.5rem 0.875rem;
     border-radius: var(--border-radius-sm);
     transition: var(--transition);
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.file-action-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .file-action-btn i {
     font-size: 1rem;
 }
 
-.file-action-btn:hover {
-    background-color: rgba(67, 97, 238, 0.1);
-    transform: translateY(-2px);
-}
-
 .delete-btn {
     color: var(--danger-color);
+    background: rgba(245, 101, 101, 0.1);
 }
 
 .delete-btn:hover {
-    background-color: rgba(231, 76, 60, 0.1);
+    background: rgba(245, 101, 101, 0.2);
+    border-color: var(--danger-color);
 }
 
-/* 状态栏 */
-#status-bar {
-    padding: 1rem 1.5rem;
-    background-color: var(--light-color);
-    border-top: 1px solid var(--border-color);
-    margin-top: 2rem;
-    font-size: 0.9rem;
+
+
+/* 空文件夹提示样式 */
+.empty-message {
+    text-align: center;
+    padding: 1rem;
     color: var(--text-secondary);
-    border-radius: var(--border-radius);
+    font-style: italic;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 确保空文件夹提示行完全透明 */
+tr:has(.empty-message),
+tr .empty-message {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 针对包含空文件夹提示的表格行 */
+.file-list tr:has(.empty-message) {
+    background: transparent !important;
+}
+
+.file-list tr:has(.empty-message):hover {
+    background: transparent !important;
 }
 
 /* 模态框 */
@@ -458,20 +533,27 @@ tr:hover .file-actions {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--card-bg);
-    padding: 1.75rem;
-    border-radius: var(--border-radius);
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    padding: 2rem;
+    border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-lg);
     z-index: 1001;
-    min-width: 400px;
+    min-width: 450px;
     max-width: 90%;
-    animation: modalFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 1px solid rgba(0,0,0,0.05);
+    animation: modalFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid var(--glass-border);
 }
 
 @keyframes modalFadeIn {
-    from { opacity: 0; transform: translate(-50%, -55%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
+    from { 
+        opacity: 0; 
+        transform: translate(-50%, -60%) scale(0.9); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1); 
+    }
 }
 
 .modal::before {
@@ -480,16 +562,16 @@ tr:hover .file-actions {
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-color), #8e54e9);
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--primary-color), #764ba2, #f093fb);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
 .modal h3 {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
     color: var(--dark-color);
-    font-weight: 700;
-    font-size: 1.375rem;
+    font-weight: 800;
+    font-size: 1.5rem;
     position: relative;
     display: inline-block;
 }
@@ -497,30 +579,32 @@ tr:hover .file-actions {
 .modal h3::after {
     content: '';
     position: absolute;
-    bottom: -5px;
+    bottom: -8px;
     left: 0;
-    width: 40px;
-    height: 3px;
-    background-color: var(--primary-color);
-    border-radius: 3px;
+    width: 50px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), #764ba2);
+    border-radius: 2px;
 }
 
 .modal input {
     width: 100%;
-    padding: 0.875rem 1.125rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--border-color);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.75rem;
+    border: 2px solid var(--border-color);
     border-radius: var(--border-radius-sm);
     font-size: 1rem;
     transition: var(--transition);
-    background-color: var(--light-color);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
 }
 
 .modal input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25);
-    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    background: white;
+    transform: translateY(-2px);
 }
 
 .modal-actions {
@@ -530,20 +614,23 @@ tr:hover .file-actions {
 }
 
 .modal-actions button {
-    padding: 0.625rem 1.25rem;
+    padding: 0.875rem 1.75rem;
     border: none;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
     transition: var(--transition);
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .modal-actions button:first-child {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
     color: white;
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 
 .modal-actions button:first-child::after {
@@ -553,7 +640,7 @@ tr:hover .file-actions {
     height: 100%;
     top: 0;
     left: -100%;
-    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
     transition: all 0.6s ease;
 }
 
@@ -562,19 +649,21 @@ tr:hover .file-actions {
 }
 
 .modal-actions button:first-child:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
 }
 
 .modal-actions button:last-child {
-    background-color: var(--light-color);
-    color: var(--text-primary);
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
 }
 
 .modal-actions button:last-child:hover {
-    background-color: var(--border-color);
-    transform: translateY(-2px);
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-sm);
 }
 
 .overlay {
@@ -584,10 +673,10 @@ tr:hover .file-actions {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.4);
     z-index: 1000;
-    backdrop-filter: blur(4px);
-    animation: fadeInOverlay 0.3s ease;
+    backdrop-filter: blur(8px);
+    animation: fadeInOverlay 0.4s ease;
 }
 
 @keyframes fadeInOverlay {
@@ -597,12 +686,14 @@ tr:hover .file-actions {
 
 /* 文件夹树 */
 .folder-tree-container {
-    max-height: 300px;
+    max-height: 350px;
     overflow-y: auto;
-    margin-bottom: 1.25rem;
-    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    border: 2px solid var(--border-color);
     border-radius: var(--border-radius-sm);
-    padding: 1rem;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
 }
 
 .folder-tree {
@@ -610,58 +701,63 @@ tr:hover .file-actions {
 }
 
 .folder-tree li {
-    margin: 0.5rem 0;
+    margin: 0.75rem 0;
 }
 
 .folder-tree-item {
     display: flex;
     align-items: center;
-    padding: 0.5rem;
+    padding: 0.75rem;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
     transition: var(--transition);
+    border: 1px solid transparent;
 }
 
 .folder-tree-item:hover {
-    background-color: rgba(74, 108, 247, 0.05);
+    background: rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-color);
+    transform: translateX(5px);
 }
 
 .folder-tree-item.selected {
-    background-color: rgba(74, 108, 247, 0.1);
-    font-weight: 500;
+    background: rgba(102, 126, 234, 0.2);
+    border-color: var(--primary-color);
+    font-weight: 600;
 }
 
 .folder-tree-item i {
-    margin-right: 0.5rem;
+    margin-right: 0.75rem;
     color: var(--warning-color);
+    font-size: 1.2rem;
 }
 
 .folder-tree-children {
-    margin-left: 1.5rem;
+    margin-left: 2rem;
     list-style: none;
-    border-left: 1px dashed var(--border-color);
-    padding-left: 0.5rem;
+    border-left: 2px dashed var(--primary-color);
+    padding-left: 1rem;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
     .container {
-        padding: 1rem;
+        padding: 1.5rem;
     }
 
     header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
 
     header h1 {
         margin-bottom: 1rem;
-        font-size: 1.75rem;
+        font-size: 2.5rem;
     }
 
     .file-list th,
     .file-list td {
-        padding: 0.75rem 1rem;
+        padding: 1rem;
     }
 
     .name-col {
@@ -679,14 +775,22 @@ tr:hover .file-actions {
     .file-actions {
         flex-wrap: wrap;
     }
+    
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 2rem 1.5rem;
+    }
+    
+
 }
 
 /* 加载动画 */
 .loading {
     display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(74, 108, 247, 0.2);
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(102, 126, 234, 0.2);
     border-radius: 50%;
     border-top-color: var(--primary-color);
     animation: spin 1s ease-in-out infinite;
@@ -704,7 +808,8 @@ tr:hover .file-actions {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
     display: none;
     flex-direction: column;
     justify-content: center;
@@ -713,68 +818,88 @@ tr:hover .file-actions {
 }
 
 #loading-indicator .spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid rgba(74, 108, 247, 0.2);
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(102, 126, 234, 0.2);
     border-radius: 50%;
     border-top-color: var(--primary-color);
     animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
 }
 
 #loading-indicator span {
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     color: var(--text-primary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 /* 通知容器 */
 #notification-container {
     position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 380px;
+    bottom: 2rem;
+    right: 2rem;
+    width: 400px;
     max-width: 90%;
     z-index: 10000;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 /* 通知消息 */
 .notification {
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem 2rem;
     border-radius: var(--border-radius);
-    font-size: 0.95rem;
+    font-size: 1rem;
     display: flex;
     align-items: center;
-    animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--shadow);
+    animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-lg);
     position: relative;
     overflow: hidden;
-    background-color: var(--card-bg);
-    border: 1px solid rgba(0,0,0,0.05);
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
 }
 
-.notification::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 4px;
-}
-
-.notification i {
-    margin-right: 1rem;
-    font-size: 1.5rem;
+/* 通知关闭按钮 */
+.close-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    opacity: 0.7;
+    transition: var(--transition);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
+}
+
+.close-btn:hover {
+    opacity: 1;
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+
+
+.notification i {
+    margin-right: 1.25rem;
+    font-size: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     flex-shrink: 0;
+    background: rgba(102, 126, 234, 0.1);
 }
 
 .notification-content {
@@ -783,52 +908,49 @@ tr:hover .file-actions {
 
 .notification-title {
     font-weight: 700;
-    margin-bottom: 0.375rem;
-    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
 }
 
 .notification-message {
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 .notification.success {
     color: var(--text-primary);
 }
 
-.notification.success::before {
-    background-color: var(--success-color);
+.notification.success {
+    color: var(--text-primary);
 }
 
 .notification.success i {
     color: var(--success-color);
-    background-color: rgba(46, 204, 113, 0.1);
+    background: rgba(72, 187, 120, 0.1);
 }
 
 .notification.error {
     color: var(--text-primary);
 }
 
-.notification.error::before {
-    background-color: var(--danger-color);
-}
-
 .notification.error i {
     color: var(--danger-color);
-    background-color: rgba(231, 76, 60, 0.1);
+    background: rgba(245, 101, 101, 0.1);
 }
 
 .notification.warning {
     color: var(--text-primary);
 }
 
-.notification.warning::before {
-    background-color: var(--warning-color);
+.notification.warning i {
+    color: var(--warning-color);
+    background: rgba(237, 137, 54, 0.1);
 }
 
 .notification.warning i {
     color: var(--warning-color);
-    background-color: rgba(243, 156, 18, 0.1);
+    background: rgba(237, 137, 54, 0.1);
 }
 
 .notification.info {
@@ -836,16 +958,16 @@ tr:hover .file-actions {
 }
 
 .notification.info::before {
-    background-color: var(--info-color);
+    background: linear-gradient(180deg, var(--info-color), #3182ce);
 }
 
 .notification.info i {
     color: var(--info-color);
-    background-color: rgba(52, 152, 219, 0.1);
+    background: rgba(66, 153, 225, 0.1);
 }
 
 .notification-hide {
-    animation: slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideOutRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideOutRight {
@@ -858,195 +980,143 @@ tr:hover .file-actions {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 0.375rem;
+    padding: 0.5rem;
     opacity: 0.7;
     transition: var(--transition);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
 }
 
 .close-notification:hover {
     opacity: 1;
-    background-color: var(--light-color);
-    color: var(--text-primary);
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+    transform: scale(1.1);
 }
 
 @keyframes slideInUp {
-    from { transform: translateY(20px); opacity: 0; }
+    from { transform: translateY(30px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 0.75rem;
-    opacity: 0.7;
-    transition: var(--transition);
-}
-
-.close-btn:hover {
-    opacity: 1;
 }
 
 /* 状态消息 */
 #status-message {
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
+    padding: 1rem 1.25rem;
+    margin-top: 1.25rem;
     border-radius: var(--border-radius-sm);
-    font-size: 0.95rem;
+    font-size: 1rem;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease;
+    backdrop-filter: blur(10px);
 }
 
 #status-message.info {
-    background-color: rgba(23, 162, 184, 0.1);
+    background: rgba(66, 153, 225, 0.1);
     color: var(--info-color);
-    border-left: 4px solid var(--info-color);
+    border-left: 5px solid var(--info-color);
 }
 
 #status-message.success {
-    background-color: rgba(40, 167, 69, 0.1);
+    background: rgba(72, 187, 120, 0.1);
     color: var(--success-color);
-    border-left: 4px solid var(--success-color);
+    border-left: 5px solid var(--success-color);
 }
 
 #status-message.error {
-    background-color: rgba(220, 53, 69, 0.1);
+    background: rgba(245, 101, 101, 0.1);
     color: var(--danger-color);
-    border-left: 4px solid var(--danger-color);
+    border-left: 5px solid var(--danger-color);
 }
 
 #status-message.warning {
-    background-color: rgba(255, 193, 7, 0.1);
+    background: rgba(237, 137, 54, 0.1);
     color: var(--warning-color);
-    border-left: 4px solid var(--warning-color);
+    border-left: 5px solid var(--warning-color);
 }
 
 /* 文件夹树样式 */
 .folder-item {
-    margin: 0.5rem 0;
+    margin: 0.75rem 0;
 }
 
 .folder-name {
     display: flex;
     align-items: center;
-    padding: 0.5rem;
+    padding: 0.75rem;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
     transition: var(--transition);
+    border: 1px solid transparent;
 }
 
 .folder-name:hover {
-    background-color: rgba(74, 108, 247, 0.05);
+    background: rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-color);
+    transform: translateX(5px);
 }
 
 .folder-name.selected {
-    background-color: rgba(74, 108, 247, 0.1);
-    font-weight: 500;
+    background: rgba(102, 126, 234, 0.2);
+    border-color: var(--primary-color);
+    font-weight: 600;
 }
 
 .folder-name i {
-    margin-right: 0.5rem;
+    margin-right: 0.75rem;
     color: var(--warning-color);
+    font-size: 1.2rem;
 }
 
 .subfolder-container {
-    margin-left: 1.5rem;
-    border-left: 1px dashed var(--border-color);
-    padding-left: 0.5rem;
+    margin-left: 2rem;
+    border-left: 2px dashed var(--primary-color);
+    padding-left: 1rem;
     overflow: hidden;
     max-height: 0;
-    transition: max-height 0.3s ease;
+    transition: max-height 0.4s ease;
 }
 
 .subfolder-container.expanded {
-    max-height: 1000px; /* 足够大的值以容纳所有内容 */
+    max-height: 1000px;
 }
 
 .folder-name .toggle-icon {
-    margin-right: 0.5rem;
-    width: 16px;
+    margin-right: 0.75rem;
+    width: 20px;
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: transform 0.4s ease;
+    color: var(--primary-color);
 }
 
 .folder-name .toggle-icon.collapsed {
     transform: rotate(-90deg);
 }
 
-/* 空文件夹样式 */
-.empty-folder {
-    text-align: center;
-    padding: 4rem 2rem;
-    background-color: var(--card-bg);
-    border-radius: var(--border-radius);
-    margin: 1.5rem 0;
-}
 
-.empty-folder-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-secondary);
-    max-width: 500px;
-    margin: 0 auto;
-}
 
-.empty-folder-content i {
-    font-size: 4rem;
-    margin-bottom: 1.5rem;
-    color: var(--primary-color);
-    opacity: 0.6;
-    background-color: var(--primary-light);
-    width: 100px;
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
 
-.empty-folder-title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--dark-color);
-    margin-bottom: 1rem;
-    letter-spacing: -0.01em;
-}
-
-.empty-folder-message {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    margin-bottom: 2rem;
-}
-
-.empty-folder-actions {
-    display: flex;
-    gap: 1rem;
-}
 
 /* 上传进度条 */
 .upload-progress-container {
-    margin: 1.5rem 0;
-    background-color: var(--light-color);
+    margin: 2rem 0;
+    background: rgba(255, 255, 255, 0.5);
     border-radius: var(--border-radius-sm);
     overflow: hidden;
-    height: 8px;
+    height: 10px;
     position: relative;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
 }
 
 .upload-progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, var(--primary-color), #8e54e9);
+    background: linear-gradient(90deg, var(--primary-color), #764ba2, #f093fb);
     width: 0;
-    transition: width 0.3s ease;
+    transition: width 0.4s ease;
     position: relative;
     overflow: hidden;
 }
@@ -1058,8 +1128,8 @@ tr:hover .file-actions {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
-    animation: progressShimmer 1.5s infinite;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+    animation: progressShimmer 2s infinite;
 }
 
 @keyframes progressShimmer {
@@ -1069,24 +1139,32 @@ tr:hover .file-actions {
 .upload-item {
     display: flex;
     align-items: center;
-    padding: 1rem;
-    background-color: var(--card-bg);
+    padding: 1.25rem;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
     border-radius: var(--border-radius-sm);
-    margin-bottom: 0.75rem;
-    box-shadow: var(--shadow-sm);
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
     transition: var(--transition);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--glass-border);
 }
 
 .upload-item:hover {
-    box-shadow: var(--shadow);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-3px);
 }
 
 .upload-item-icon {
-    margin-right: 1rem;
+    margin-right: 1.25rem;
     color: var(--primary-color);
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    background: rgba(102, 126, 234, 0.1);
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
 }
 
 .upload-item-details {
@@ -1094,33 +1172,35 @@ tr:hover .file-actions {
 }
 
 .upload-item-name {
-    font-weight: 600;
-    margin-bottom: 0.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
 }
 
 .upload-item-size {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-secondary);
 }
 
 .upload-item-progress {
-    width: 100px;
-    height: 6px;
-    background-color: var(--light-color);
-    border-radius: 3px;
+    width: 120px;
+    height: 8px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 4px;
     overflow: hidden;
-    margin-left: 1rem;
+    margin-left: 1.25rem;
 }
 
 .upload-item-progress-bar {
     height: 100%;
-    background-color: var(--primary-color);
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, var(--primary-color), #764ba2);
+    transition: width 0.4s ease;
 }
 
 .upload-item-status {
-    margin-left: 1rem;
-    font-size: 0.9rem;
+    margin-left: 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 .upload-item-status.complete {
@@ -1133,31 +1213,31 @@ tr:hover .file-actions {
 
 /* 增强动画效果 */
 .fade-in {
-    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fade-out {
-    animation: fadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-in-up {
-    animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-in-down {
-    animation: slideInDown 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-in-left {
-    animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-in-right {
-    animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .bounce-in {
-    animation: bounceIn 0.6s cubic-bezier(0.19, 1.15, 0.3, 1.15);
+    animation: bounceIn 0.8s cubic-bezier(0.19, 1.15, 0.3, 1.15);
 }
 
 @keyframes fadeIn {
@@ -1171,55 +1251,92 @@ tr:hover .file-actions {
 }
 
 @keyframes slideInUp {
-    from { transform: translateY(30px); opacity: 0; }
+    from { transform: translateY(40px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slideInDown {
-    from { transform: translateY(-30px); opacity: 0; }
+    from { transform: translateY(-40px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slideInLeft {
-    from { transform: translateX(-30px); opacity: 0; }
+    from { transform: translateX(-40px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
 @keyframes slideInRight {
-    from { transform: translateX(30px); opacity: 0; }
+    from { transform: translateX(40px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
 @keyframes bounceIn {
-    0% { transform: scale(0.8); opacity: 0; }
+    0% { transform: scale(0.7); opacity: 0; }
     70% { transform: scale(1.05); opacity: 1; }
     100% { transform: scale(1); opacity: 1; }
 }
 
 /* 行悬停效果 */
 .row-hover {
-    background-color: rgba(74, 108, 247, 0.05);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
 }
 
 /* 移动设备优化 */
 @media (max-width: 576px) {
     .container {
-        padding: 0.5rem;
+        padding: 1rem;
     }
     
     .file-list th,
     .file-list td {
-        padding: 0.5rem;
+        padding: 0.75rem;
     }
     
     .file-actions {
         flex-direction: column;
-        gap: 0.25rem;
+        gap: 0.5rem;
     }
     
     .modal {
-        min-width: 90%;
+        min-width: 95%;
+        padding: 1.5rem;
     }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--primary-hover), #5a67d8);
+}
+
+/* 选择文本样式 */
+::selection {
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
+    color: white;
+}
+
+::-moz-selection {
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
+    color: white;
 }
 
 /* 打印样式 */
@@ -1238,5 +1355,9 @@ tr:hover .file-actions {
     .file-explorer {
         box-shadow: none;
         border: 1px solid #ddd;
+    }
+    
+    body {
+        background: white !important;
     }
 }

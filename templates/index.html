@@ -21,7 +21,11 @@
     <div class="container">
         <header>
             <h1>文件管理系统</h1>
-
+            <div class="header-decoration">
+                <div class="decoration-circle"></div>
+                <div class="decoration-circle"></div>
+                <div class="decoration-circle"></div>
+            </div>
         </header>
 
         <main>
@@ -43,7 +47,7 @@
                 </div>
 
                 <div class="file-list-container">
-                    <table class="file-list">
+                    <table class="file-list" id="file-table">
                         <thead>
                             <tr>
                                 <th class="name-col">名称</th>
@@ -58,10 +62,6 @@
                 </div>
             </div>
         </main>
-
-        <div id="status-bar">
-            <span id="status-message"></span>
-        </div>
     </div>
 
     <!-- 模态框 -->

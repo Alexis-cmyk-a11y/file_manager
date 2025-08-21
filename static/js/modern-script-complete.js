@@ -172,7 +172,6 @@ async function loadFileList() {
     console.log("开始加载文件列表，当前路径：", currentPath);
     try {
         showLoading(true);
-        showStatus('正在加载...', 'info');
         
         const url = `/api/list?path=${encodeURIComponent(currentPath)}`;
         console.log("请求URL：", url);
@@ -186,17 +185,13 @@ async function loadFileList() {
         if (response.ok) {
             console.log("加载成功，渲染文件列表");
             renderFileList(data.items);
-            showStatus(`已加载 ${data.items.length} 个项目`, 'success');
-            showNotification(`已加载 ${data.items.length} 个项目`, 'success');
         } else {
             console.error("加载失败：", data.message);
-            showStatus(data.message, 'error');
             showNotification(data.message, 'error');
         }
     } catch (error) {
         console.error("加载文件列表时发生错误：", error);
         const errorMsg = '加载文件列表时发生错误: ' + error.message;
-        showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
@@ -212,18 +207,14 @@ function renderFileList(items) {
     setTimeout(() => {
         fileListElement.innerHTML = '';
         
+        // 获取表格元素
+        const fileTable = document.getElementById('file-table');
+        
         if (items.length === 0) {
-            const emptyRow = document.createElement('tr');
-            emptyRow.innerHTML = `
-                <td colspan="3" class="empty-folder">
-                    <div class="empty-folder-content">
-                        <i class="fas fa-folder-open fa-3x"></i>
-                        <p>此文件夹为空</p>
-                    </div>
-                </td>
-            `;
-            fileListElement.appendChild(emptyRow);
+            // 显示空文件夹提示
+            fileListElement.innerHTML = '<tr><td colspan="3" class="empty-message">当前文件夹为空</td></tr>';
         } else {
+            
             // 对项目进行排序：先文件夹，后文件，按名称字母顺序排序
             items.sort((a, b) => {
                 if (a.type !== b.type) {
@@ -231,7 +222,6 @@ function renderFileList(items) {
                 }
                 return a.name.localeCompare(b.name);
             });
-            
             items.forEach((item, index) => {
                 const row = document.createElement('tr');
                 row.style.animationDelay = `${index * 0.05}s`; // 添加延迟动画效果
@@ -455,7 +445,6 @@ async function uploadFiles() {
     
     try {
         showLoading(true);
-        showStatus('正在上传文件...', 'info');
         
         const formData = new FormData();
         formData.append('path', currentPath);
@@ -473,16 +462,13 @@ async function uploadFiles() {
         const data = await response.json();
         
         if (response.ok) {
-            showStatus('文件上传成功', 'success');
             showNotification('文件上传成功', 'success');
             loadFileList(); // 重新加载文件列表
         } else {
-            showStatus(data.message, 'error');
             showNotification(data.message, 'error');
         }
     } catch (error) {
         const errorMsg = '上传文件时发生错误: ' + error.message;
-        showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
@@ -539,16 +525,13 @@ async function createFolder() {
         const data = await response.json();
         
         if (response.ok) {
-            showStatus('文件夹创建成功', 'success');
             showNotification('文件夹创建成功', 'success');
             loadFileList(); // 重新加载文件列表
         } else {
-            showStatus(data.message, 'error');
             showNotification(data.message, 'error');
         }
     } catch (error) {
         const errorMsg = '创建文件夹时发生错误: ' + error.message;
-        showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
@@ -602,16 +585,13 @@ async function confirmRename() {
         const data = await response.json();
         
         if (response.ok) {
-            showStatus('重命名成功', 'success');
             showNotification('重命名成功', 'success');
             loadFileList(); // 重新加载文件列表
         } else {
-            showStatus(data.message, 'error');
             showNotification(data.message, 'error');
         }
     } catch (error) {
         const errorMsg = '重命名时发生错误: ' + error.message;
-        showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
@@ -967,24 +947,20 @@ async function confirmMoveCopy() {
         
         if (response.ok) {
             const actionText = operationType === 'move' ? '移动' : '复制';
-            showStatus(`${actionText}成功`, 'success');
             showNotification(`${actionText}成功`, 'success');
             loadFileList(); // 重新加载文件列表
         } else {
             // 检查是否是目标路径已存在同名文件或目录的错误
             if (response.status === 409 && data.message.includes('目标路径已存在同名文件或目录')) {
                 const errorMsg = `目标文件夹中已存在同名的文件或文件夹。请先删除目标位置的同名项，或者选择一个不同的目标文件夹。`;
-                showStatus(errorMsg, 'error');
                 showNotification(errorMsg, 'error');
             } else {
-                showStatus(data.message, 'error');
                 showNotification(data.message, 'error');
             }
         }
     } catch (error) {
         const actionText = operationType === 'move' ? '移动' : '复制';
         const errorMsg = `${actionText}时发生错误: ${error.message}`;
-        showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
@@ -1015,16 +991,13 @@ async function confirmDelete(path, name, type) {
         const data = await response.json();
         
         if (response.ok) {
-            showStatus('删除成功', 'success');
             showNotification('删除成功', 'success');
             loadFileList(); // 重新加载文件列表
         } else {
-            showStatus(data.message, 'error');
             showNotification(data.message, 'error');
         }
     } catch (error) {
         const errorMsg = '删除时发生错误: ' + error.message;
-        showStatus(errorMsg, 'error');
         showNotification(errorMsg, 'error');
     } finally {
         showLoading(false);
