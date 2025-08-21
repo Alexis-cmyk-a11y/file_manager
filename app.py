@@ -5,18 +5,34 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, abort
 from werkzeug.utils import secure_filename
-import os
-import sys
 import importlib.util
-import logging
 
-# 配置日志记录
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='file_manager.log'
-)
-logger = logging.getLogger(__name__)
+def setup_logging():
+    """配置日志记录，支持日志文件轮转"""
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    
+    # 日志格式
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    
+    # 控制台日志
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    # 文件日志（轮转）
+    file_handler = RotatingFileHandler(
+        'file_manager.log',
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'  # 增加编码设置，避免日志文件乱码
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+    return logger
+
+logger = setup_logging()
 
 def load_config_from_file(config_path):
     """从指定路径加载config.py文件"""
@@ -25,11 +41,16 @@ def load_config_from_file(config_path):
         config_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config_module)
         return config_module.Config
+    except ImportError as e:
+        logger.error(f"加载配置文件失败: 模块导入错误 - {str(e)}")
+    except AttributeError as e:
+        logger.error(f"加载配置文件失败: 配置类未定义 - {str(e)}")
     except Exception as e:
-        logger.error(f"加载配置文件失败: {str(e)}")
-        return None
+        logger.error(f"加载配置文件失败: 未知错误 - {str(e)}")
+    return None
 
 def get_config():
+    """获取配置，支持环境变量覆盖"""
     # 获取当前可执行文件所在目录
     if getattr(sys, 'frozen', False):
         base_dir = os.path.dirname(sys.executable)
@@ -49,11 +70,14 @@ def get_config():
     # 提供默认配置
     logger.warning("使用默认配置")
     class DefaultConfig:
-        FILE_OPERATION_PERMISSION = 'read_write'
-        SERVER_HOST = '0.0.0.0'
+        FILE_OPERATION_PERMISSION = os.getenv('FILE_OPERATION_PERMISSION', 'read_write')
+        SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')
         SERVER_PORT = 5000
         LOG_FILE = 'file_manager.log'
         LOG_LEVEL = 'INFO'
+        LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        LOG_MAX_SIZE = 10 * 1024 * 1024  # 10MB
+        LOG_BACKUP_COUNT = 5
     return DefaultConfig
 
 Config = get_config()
@@ -75,6 +99,8 @@ def resource_path(relative_path):
 
 # 从配置文件加载配置
 app.config['MAX_CONTENT_LENGTH'] = Config.MAX_CONTENT_LENGTH
+app.config['ENV'] = Config.ENV
+app.config['DEBUG'] = Config.DEBUG_MODE
 
 # 设置根目录
 ROOT_DIR = Config.ROOT_DIR
@@ -133,23 +159,23 @@ def list_files():
         logger.warning(f"请求的路径不存在: {full_path}")
         return jsonify({'success': False, 'message': '路径不存在'}), 404
     
-    if not full_path.startswith(ROOT_DIR):
+    if not os.path.abspath(full_path).startswith(os.path.abspath(ROOT_DIR)):
         logger.warning(f"尝试访问根目录之外的路径: {full_path}")
         return jsonify({'success': False, 'message': '无法访问根目录之外的路径'}), 403
     
-    try:
-        # 获取目录内容
+    def get_directory_items(directory_path, relative_path):
+        """获取目录内容并返回格式化列表"""
         items = []
-        for item in os.listdir(full_path):
+        for item in os.listdir(directory_path):
             try:
-                item_path = os.path.join(full_path, item)
+                item_path = os.path.join(directory_path, item)
                 item_type = 'directory' if os.path.isdir(item_path) else 'file'
                 item_size = os.path.getsize(item_path) if item_type == 'file' else 0
                 items.append({
                     'name': item,
                     'type': item_type,
                     'size': item_size,
-                    'path': os.path.join(rel_path, item).replace('\\', '/'),
+                    'path': os.path.join(relative_path, item).replace('\\', '/'),
                     'modified': os.path.getmtime(item_path)
                 })
             except Exception as item_error:
@@ -157,6 +183,10 @@ def list_files():
         
         # 按类型和名称排序：先目录后文件，同类型按名称排序
         items.sort(key=lambda x: (0 if x['type'] == 'directory' else 1, x['name'].lower()))
+        return items
+
+    try:
+        items = get_directory_items(full_path, rel_path)
         
         logger.debug(f"目录 {full_path} 中找到 {len(items)} 个项目")
         return jsonify({
@@ -203,23 +233,21 @@ def upload_file():
         logger.warning("上传的文件列表为空")
         return jsonify({'success': False, 'message': '没有选择文件'}), 400
     
-    try:
+    def save_uploaded_files(files, target_directory, allowed_extensions=None):
+        """保存上传的文件并返回上传结果"""
         uploaded_count = 0
         uploaded_info = []
         
-        for file in uploaded_files:
-            # 检查文件名是否为空
+        for file in files:
             if file.filename == '':
                 continue
-            
-            # 检查文件类型是否允许
-            if Config.ALLOWED_EXTENSIONS and not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS):
+                
+            if allowed_extensions and not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
                 logger.warning(f"不允许的文件类型: {file.filename}")
                 continue
-            
-            # 保存文件
+                
             filename = secure_filename(file.filename)
-            file_path = os.path.join(full_target_dir, filename)
+            file_path = os.path.join(target_directory, filename)
             file.save(file_path)
             
             file_size = os.path.getsize(file_path)
@@ -228,9 +256,18 @@ def upload_file():
             uploaded_count += 1
             uploaded_info.append({
                 'name': filename,
-                'path': os.path.join(target_dir, filename).replace('\\', '/'),
+                'path': os.path.relpath(file_path, start=ROOT_DIR).replace('\\', '/'),
                 'size': file_size
             })
+        
+        return uploaded_count, uploaded_info
+
+    try:
+        uploaded_count, uploaded_info = save_uploaded_files(
+            uploaded_files, 
+            full_target_dir, 
+            Config.ALLOWED_EXTENSIONS
+        )
         
         if uploaded_count == 0:
             return jsonify({'success': False, 'message': '没有文件被成功上传'}), 400
@@ -267,18 +304,18 @@ def download_file():
         logger.warning(f"尝试下载根目录之外的文件: {full_path}")
         return jsonify({'success': False, 'message': '无法访问根目录之外的文件'}), 403
     
-    try:
-        # 获取文件所在目录和文件名
-        directory = os.path.dirname(full_path)
-        filename = os.path.basename(full_path)
-        
-        logger.info(f"下载文件: {filename}, 大小: {os.path.getsize(full_path)} 字节")
-        
-        # 发送文件
+    def download_single_file(file_path):
+        """下载单个文件"""
+        directory = os.path.dirname(file_path)
+        filename = os.path.basename(file_path)
+        logger.info(f"下载文件: {filename}, 大小: {os.path.getsize(file_path)} 字节")
         return send_from_directory(directory, filename, as_attachment=True)
+
+    try:
+        return download_single_file(full_path)
     except Exception as e:
-        logger.error(f"文件下载失败: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"文件下载失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '文件下载失败，请稍后重试'}), 500
 
 @app.route('/api/copy', methods=['POST'])
 def copy_item():
@@ -389,8 +426,8 @@ def move_item():
             'message': f'{"文件" if is_file else "目录"} {source_name} 移动成功'
         })
     except Exception as e:
-        logger.error(f"移动失败: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"移动失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '移动操作失败，请稍后重试'}), 500
 
 @app.route('/api/delete', methods=['POST'])
 def delete_item():
@@ -435,8 +472,8 @@ def delete_item():
             'message': f'{item_type} {item_name} 删除成功'
         })
     except Exception as e:
-        logger.error(f"删除失败: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"删除失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '删除操作失败，请稍后重试'}), 500
 
 @app.route('/api/create_folder', methods=['POST'])
 def create_folder():
