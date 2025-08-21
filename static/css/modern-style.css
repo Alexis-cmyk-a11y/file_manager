@@ -661,7 +661,7 @@ tr:hover .file-actions {
     list-style: none;
 }
 
-.folder-tree-item {
+.folder-item {
     display: flex;
     align-items: center;
     padding: 1rem;
@@ -673,7 +673,7 @@ tr:hover .file-actions {
     overflow: hidden;
 }
 
-.folder-tree-item::before {
+.folder-item::before {
     content: '';
     position: absolute;
     top: 0;
@@ -684,31 +684,80 @@ tr:hover .file-actions {
     transition: left 0.3s ease;
 }
 
-.folder-tree-item:hover::before {
+.folder-item:hover::before {
     left: 100%;
 }
 
-.folder-tree-item:hover { 
+.folder-item:hover { 
     background: var(--primary-light);
     transform: translateX(4px);
 }
 
-.folder-tree-item.selected {
+.folder-item .folder-name.selected {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
     color: white;
     box-shadow: var(--shadow-sm);
 }
 
-.folder-tree-item i {
+.folder-item i {
     margin-right: 1rem;
     color: var(--warning-color);
     font-size: 1.1rem;
 }
 
-.folder-tree-children {
+.subfolder-list {
     margin-left: 2rem;
     border-left: 2px dashed var(--border-color);
     padding-left: 1.5rem;
+    list-style: none;
+}
+
+.subfolder-list .folder-item {
+    margin: 0.25rem 0;
+}
+
+.folder-name {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.folder-name:hover {
+    background: var(--primary-light);
+}
+
+.folder-name.selected {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.toggle-icon {
+    margin-left: auto;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.toggle-icon:hover {
+    color: var(--primary-color);
+}
+
+.loading-tree, .loading-item {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.error-message {
+    padding: 1rem;
+    text-align: center;
+    color: var(--error-color);
+    font-weight: 600;
 }
 
 #loading-indicator {

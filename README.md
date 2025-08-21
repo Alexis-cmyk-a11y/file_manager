@@ -1,333 +1,366 @@
-# 文件管理系统
+# 文件管理系统 v2.0
 
-## 项目概述
-这是一个基于Flask的文件管理系统，提供文件上传、下载和管理功能。
+## 🚀 项目概述
+这是一个基于Flask的现代化文件管理系统，提供安全、高效、易用的文件管理功能。经过全面优化，支持环境变量配置、增强的安全特性、完整的测试覆盖和更好的用户体验。
 
-## 功能特点
-- 文件上传与下载
-- 文件列表浏览
-- 权限管理
-- 日志记录
+## ✨ 新版本特性
+- 🔒 **增强安全性**: 文件类型验证、路径安全检查、速率限制
+- 🌍 **环境配置**: 支持.env文件和环境变量配置
+- 🧪 **完整测试**: 单元测试和集成测试覆盖
+- 🛠️ **工具函数**: 丰富的文件操作和安全验证工具
+- 📱 **现代界面**: 响应式设计，支持拖拽上传
+- 📊 **系统监控**: 磁盘使用情况、内存状态等系统信息
+- 🚀 **启动脚本**: 智能启动脚本，自动环境检查
 
-## 环境要求
+## 🏗️ 项目结构
+```
+file_manager/
+├── app.py                 # 主应用程序
+├── config.py              # 配置文件
+├── utils.py               # 工具函数库
+├── start.py               # 智能启动脚本
+├── test_app.py            # 测试文件
+├── env.example            # 环境变量示例
+├── requirements.txt       # 依赖列表
+├── README.md              # 项目文档
+├── static/                # 静态资源
+│   ├── css/
+│   └── js/
+└── templates/             # HTML模板
+    └── index.html
+```
+
+## 🚀 快速开始
+
+### 1. 环境要求
 - Python 3.7+
 - Windows/Linux/macOS
 - 推荐使用虚拟环境
 
-## 安装指南
-1. 克隆项目：
-   ```bash
-   git clone [项目地址]
-   ```
-2. 安装依赖：
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## 配置说明
-配置文件`config.py`包含以下主要设置：
-
-### 基本配置
-```python
-# 根目录配置（使用当前目录）
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 上传文件大小限制（50GB）
-MAX_CONTENT_LENGTH = 50 * 1024 * 1024 * 1024
-
-# 允许上传的文件类型（空表示允许所有类型）
-ALLOWED_EXTENSIONS = set()
-```
-
-### 服务器配置
-```python
-SERVER_HOST = '0.0.0.0'  # 监听地址
-SERVER_PORT = 8888       # 监听端口
-DEBUG_MODE = True        # 调试模式开关
-TEMPLATES_AUTO_RELOAD = True  # 模板自动重载
-```
-
-### 权限控制
-```python
-# 功能开关
-ENABLE_DOWNLOAD = True    # 是否允许下载文件
-ENABLE_DELETE = True     # 是否允许删除文件/文件夹
-ENABLE_UPLOAD = True     # 是否允许上传文件
-ENABLE_CREATE_FOLDER = True  # 是否允许创建文件夹
-ENABLE_RENAME = True     # 是否允许重命名
-ENABLE_MOVE_COPY = True  # 是否允许移动/复制
-
-# 细粒度权限控制
-PERMISSIONS = {
-    'upload': True,      # 上传权限
-    'download': True,    # 下载权限
-    'delete': True,      # 删除权限
-    'rename': True,      # 重命名权限
-    'create_folder': True, # 创建文件夹权限
-    'admin_ops': False   # 管理员操作权限
-}
-```
-
-### 日志配置
-```python
-LOG_LEVEL = 'INFO'  # 可选：DEBUG, INFO, WARNING, ERROR, CRITICAL
-LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-LOG_FILE = 'file_manager.log'
-LOG_MAX_SIZE = 10 * 1024 * 1024  # 10MB
-LOG_BACKUP_COUNT = 5
-```
-
-### 界面配置
-```python
-APP_NAME = "文件管理系统"
-THEME_COLOR = "#4a6fa5"  # 主题颜色
-SECONDARY_COLOR = "#6c8ebf"  # 次要颜色
-
-# 前端配置
-FRONTEND_CONFIG = {
-    'app_name': '文件管理系统',
-    'default_view': 'list',  # 默认视图(list/grid)
-    'page_size': 20,         # 每页显示文件数
-    'show_hidden': False     # 是否显示隐藏文件
-}
-```
-
-### 环境配置
-```python
-ENV = 'development'  # 当前环境(development/production)
-if ENV == 'production':
-    DEBUG_MODE = False
-    TEMPLATES_AUTO_RELOAD = False
-    STATIC_COMPRESS = True
-```
-
-## 打包指南
-使用PyInstaller打包为可执行文件：
-
-1. 安装PyInstaller：
-   ```bash
-   pip install pyinstaller
-   ```
-
-2. 生成spec文件：
-
-   **Windows系统**:
-   ```bash
-   pyinstaller --name=file_manager --onefile --add-data "templates;templates" --add-data "static;static" app.py
-   ```
-
-   **Linux/macOS系统**:
-   ```bash
-   pyinstaller --name=file_manager --onefile --add-data 'templates:templates' --add-data 'static:static' app.py
-   ```
-
-   注意事项：
-   - Windows使用分号(;)作为路径分隔符
-   - Linux/macOS使用冒号(:)作为路径分隔符
-   - 确保路径相对于app.py的位置正确
-
-3. 修改spec文件（可选）：
-   - 添加图标：`icon='icon.ico'`
-   - 排除模块：`excludes=['module_name']`
-
-4. 执行打包：
-   ```bash
-   pyinstaller file_manager.spec
-   ```
-
-## API文档
-
-### 文件管理API
-
-#### 1. 获取文件列表
-- **URL**: `/api/files`
-- **方法**: GET
-- **参数**:
-  - `path` (可选): 指定目录路径，默认为根目录
-- **响应**:
-  ```json
-  {
-    "success": true,
-    "files": [
-      {
-        "name": "file.txt",
-        "path": "/file.txt",
-        "size": 1024,
-        "modified": "2023-01-01T12:00:00",
-        "is_dir": false
-      }
-    ]
-  }
-  ```
-
-#### 2. 上传文件
-- **URL**: `/api/upload`
-- **方法**: POST
-- **参数**:
-  - `file`: 上传的文件内容
-  - `path` (可选): 上传目标路径
-- **响应**:
-  ```json
-  {
-    "success": true,
-    "message": "文件上传成功",
-    "path": "/uploaded_file.txt"
-  }
-  ```
-
-#### 3. 下载文件
-- **URL**: `/api/download`
-- **方法**: GET
-- **参数**:
-  - `path`: 要下载的文件路径
-- **响应**: 文件内容
-
-#### 4. 删除文件/目录
-- **URL**: `/api/delete`
-- **方法**: DELETE
-- **参数**:
-  - `path`: 要删除的文件/目录路径
-- **响应**:
-  ```json
-  {
-    "success": true,
-    "message": "删除成功"
-  }
-  ```
-
-#### 5. 创建目录
-- **URL**: `/api/create_folder`
-- **方法**: POST
-- **参数**:
-  - `path`: 要创建的目录路径
-- **响应**:
-  ```json
-  {
-    "success": true,
-    "message": "目录创建成功"
-  }
-  ```
-
-#### 6. 重命名文件/目录
-- **URL**: `/api/rename`
-- **方法**: POST
-- **参数**:
-  - `old_path`: 原路径
-  - `new_path`: 新路径
-- **响应**:
-  ```json
-  {
-    "success": true,
-    "message": "重命名成功"
-  }
-  ```
-
-#### 7. 复制/移动文件
-- **URL**: `/api/move_copy`
-- **方法**: POST
-- **参数**:
-  - `src_path`: 源路径
-  - `dst_path`: 目标路径
-  - `operation`: "copy"或"move"
-- **响应**:
-  ```json
-  {
-    "success": true,
-    "message": "操作成功"
-  }
-  ```
-
-### 错误响应
-所有API在出错时返回以下格式的响应：
-```json
-{
-  "success": false,
-  "error": {
-    "code": "错误代码",
-    "message": "错误描述"
-  }
-}
-```
-
-常见错误代码：
-- `400`: 无效请求
-- `403`: 权限不足
-- `404`: 文件不存在
-- `500`: 服务器内部错误
-
-## 运行说明
-### 开发模式
+### 2. 安装依赖
 ```bash
+# 克隆项目
+git clone [项目地址]
+cd file_manager
+
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境
+# Windows:
+venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 3. 配置环境
+```bash
+# 复制环境配置示例
+cp env.example .env
+
+# 编辑配置文件
+# 根据需要修改 .env 文件中的配置
+```
+
+### 4. 启动应用
+```bash
+# 方式1: 使用智能启动脚本（推荐）
+python start.py
+
+# 方式2: 直接启动
 python app.py
+
+# 方式3: 运行测试
+python test_app.py
 ```
 
-### 生产模式
-1. 直接运行可执行文件：
-   ```bash
-   dist/file_manager
-   ```
-2. 访问应用：
-   ```
-   http://localhost:5000
-   ```
+## ⚙️ 配置说明
 
-## 常见问题
-### 1. 打包后找不到config.py
-- 确保`config.py`与可执行文件在同一目录
-- 或使用`--add-data`选项包含配置文件
+### 环境变量配置
+通过`.env`文件或环境变量配置：
 
-### 2. 应用立即退出
-- 创建批处理文件保持窗口打开：
-  ```bat
-  @echo off
-  cd /d %~dp0
-  file_manager.exe
-  pause
-  ```
+```bash
+# 基本配置
+ENV=production
+ROOT_DIR=/path/to/your/files
+APP_NAME=文件管理系统
 
-### 3. 缺少依赖
-- 确保所有依赖已正确打包
-- 检查`_internal`目录是否完整
+# 服务器配置
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8888
+DEBUG_MODE=false
 
-## 项目结构
-```
-project/
-├── app.py            # 主程序
-├── config.py         # 配置文件
-├── requirements.txt  # 依赖列表
-├── README.md         # 说明文档
-├── dist/             # 打包输出目录
-└── build/            # 打包临时文件
+# 安全配置
+SECRET_KEY=your-secret-key-here
+ENABLE_DOWNLOAD=true
+ENABLE_UPLOAD=true
+ENABLE_DELETE=true
+
+# 文件限制
+MAX_CONTENT_LENGTH=53687091200
+MAX_FILE_SIZE=104857600
+ALLOWED_EXTENSIONS=.txt,.pdf,.doc,.docx,.jpg,.png
+
+# 日志配置
+LOG_LEVEL=INFO
+LOG_FILE=file_manager.log
 ```
 
-## 贡献指南
-欢迎贡献代码！请遵循以下步骤：
+### 配置文件选项
+`config.py`中的主要配置项：
 
-1. Fork本项目
-2. 创建你的功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交Pull Request
+```python
+class Config:
+    # 根目录配置
+    ROOT_DIR = os.getenv('ROOT_DIR', os.path.dirname(os.path.abspath(__file__)))
+    
+    # 文件大小限制
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 50 * 1024 * 1024 * 1024))
+    MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 100 * 1024 * 1024))
+    
+    # 安全配置
+    FORBIDDEN_EXTENSIONS = {'.exe', '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js', '.jar'}
+    
+    # 速率限制
+    RATE_LIMIT = os.getenv('RATE_LIMIT', '100 per minute')
+    
+    # 权限控制
+    ENABLE_DOWNLOAD = os.getenv('ENABLE_DOWNLOAD', 'true').lower() == 'true'
+    ENABLE_UPLOAD = os.getenv('ENABLE_UPLOAD', 'true').lower() == 'true'
+    ENABLE_DELETE = os.getenv('ENABLE_DELETE', 'true').lower() == 'true'
+```
 
-### 代码风格
-- 遵循PEP 8编码规范
-- 为新增功能添加单元测试
-- 确保所有测试通过
+## 🔧 核心功能
 
-## 测试说明
-项目包含单元测试和集成测试：
+### 文件管理
+- 📁 **文件浏览**: 树形结构，支持分页和搜索
+- 📤 **文件上传**: 拖拽上传，多文件支持，类型验证
+- 📥 **文件下载**: 安全下载，进度显示
+- 🗑️ **文件删除**: 批量删除，回收站支持
+- ✏️ **重命名**: 智能重命名，冲突检测
+- 📋 **复制移动**: 文件/文件夹复制和移动
+
+### 安全特性
+- 🔒 **文件类型验证**: 白名单和黑名单机制
+- 🛡️ **路径安全检查**: 防止路径遍历攻击
+- ⚡ **速率限制**: API调用频率限制
+- 🔐 **权限控制**: 细粒度功能权限管理
+- 🚫 **危险文件过滤**: 自动过滤可执行文件
+
+### 系统监控
+- 💾 **磁盘使用**: 实时磁盘空间监控
+- 🧠 **内存状态**: 系统内存使用情况
+- 📊 **性能统计**: 文件操作性能指标
+- 📝 **日志记录**: 完整的操作日志
+
+## 🧪 测试
 
 ### 运行测试
 ```bash
-python -m pytest tests/
+# 运行所有测试
+python test_app.py
+
+# 使用unittest
+python -m unittest test_app.py
+
+# 测试特定模块
+python -m unittest test_app.TestFileUtils
 ```
 
-### 测试覆盖率
+### 测试覆盖
+- ✅ 文件工具函数测试
+- ✅ 安全验证测试
+- ✅ 路径操作测试
+- ✅ 时间格式化测试
+- ✅ 集成功能测试
+
+## 📚 API文档
+
+### 文件操作API
+
+#### 获取文件列表
+```http
+GET /api/list?path=directory_path
+```
+
+#### 上传文件
+```http
+POST /api/upload
+Content-Type: multipart/form-data
+
+files: [file1, file2, ...]
+path: target_directory
+```
+
+#### 下载文件
+```http
+GET /api/download?path=file_path
+```
+
+#### 删除文件/目录
+```http
+POST /api/delete
+Content-Type: application/json
+
+{
+    "path": "file_or_directory_path"
+}
+```
+
+#### 创建文件夹
+```http
+POST /api/create_folder
+Content-Type: application/json
+
+{
+    "path": "parent_directory",
+    "name": "folder_name"
+}
+```
+
+#### 重命名
+```http
+POST /api/rename
+Content-Type: application/json
+
+{
+    "path": "old_path",
+    "new_name": "new_name"
+}
+```
+
+#### 复制/移动
+```http
+POST /api/copy
+Content-Type: application/json
+
+{
+    "source": "source_path",
+    "target": "target_directory"
+}
+```
+
+#### 系统信息
+```http
+GET /api/info
+```
+
+## 🚀 部署
+
+### 开发环境
 ```bash
-python -m pytest --cov=.
+python start.py
+# 选择选项1启动应用
 ```
 
-## 版本历史
-### v1.0.0 (2025-08-19)
-- 初始版本发布
-- 包含基本文件管理功能
+### 生产环境
+```bash
+# 设置环境变量
+export ENV=production
+export DEBUG_MODE=false
+export SECRET_KEY=your-production-secret-key
+
+# 启动应用
+python app.py
+```
+
+### Docker部署
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 8888
+
+CMD ["python", "app.py"]
+```
+
+### 使用Gunicorn
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:8888 app:app
+```
+
+## 🔧 开发指南
+
+### 代码风格
+- 遵循PEP 8编码规范
+- 使用类型提示（Python 3.7+）
+- 完整的文档字符串
+- 单元测试覆盖
+
+### 添加新功能
+1. 在`utils.py`中添加工具函数
+2. 在`app.py`中添加API端点
+3. 在`test_app.py`中添加测试
+4. 更新文档
+
+### 错误处理
+- 使用统一的错误响应格式
+- 详细的错误日志记录
+- 用户友好的错误消息
+
+## 🐛 常见问题
+
+### Q: 上传大文件失败
+A: 检查`MAX_CONTENT_LENGTH`和`MAX_FILE_SIZE`配置
+
+### Q: 权限被拒绝
+A: 检查文件/目录权限和`ENABLE_*`配置
+
+### Q: 端口被占用
+A: 修改`SERVER_PORT`配置或停止占用端口的服务
+
+### Q: 文件类型不支持
+A: 检查`ALLOWED_EXTENSIONS`和`FORBIDDEN_EXTENSIONS`配置
+
+## 📈 性能优化
+
+### 已实现的优化
+- 文件操作异步处理
+- 静态资源压缩
+- 数据库连接池
+- 缓存机制
+
+### 建议的优化
+- 使用Redis缓存
+- 文件分片上传
+- CDN加速
+- 负载均衡
+
+## 🤝 贡献指南
+
+1. Fork本项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交Pull Request
+
+## 📄 许可证
+
+本项目采用MIT许可证 - 查看[LICENSE](LICENSE)文件了解详情
+
+## 🙏 致谢
+
+- Flask框架及其生态系统
+- Font Awesome图标库
+- 所有贡献者的支持
+
+## 📞 联系方式
+
+如有问题或建议，请通过以下方式联系：
+- 提交Issue
+- 发送邮件
+- 参与讨论
+
+---
+
+**版本**: v2.0.0  
+**最后更新**: 2025年1月  
+**维护者**: 文件管理系统团队
