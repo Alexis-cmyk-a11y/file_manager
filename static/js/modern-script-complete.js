@@ -212,7 +212,7 @@ function renderFileList(items) {
         
         if (items.length === 0) {
             // 显示空文件夹提示
-            fileListElement.innerHTML = '<tr><td colspan="3" class="empty-message">当前文件夹为空</td></tr>';
+            fileListElement.innerHTML = '<tr><td colspan="4" class="empty-message">当前文件夹为空</td></tr>';
         } else {
             
             // 对项目进行排序：先文件夹，后文件，按名称字母顺序排序
@@ -222,7 +222,17 @@ function renderFileList(items) {
                 }
                 return a.name.localeCompare(b.name);
             });
+            
+            // 计算统计信息
+            let totalFiles = 0;
+            let totalSize = 0;
+            
             items.forEach((item, index) => {
+                if (item.type === 'file') {
+                    totalFiles++;
+                    totalSize += item.size || 0;
+                }
+                
                 const row = document.createElement('tr');
                 row.style.animationDelay = `${index * 0.05}s`; // 添加延迟动画效果
                 
@@ -232,6 +242,9 @@ function renderFileList(items) {
                 // 图标类
                 const iconClass = item.type === 'directory' ? 'fas fa-folder folder-icon' : getFileIconClass(item.name);
                 
+                // 获取修改时间
+                const modifiedTime = item.modified ? new Date(item.modified * 1000).toLocaleString('zh-CN') : '-';
+                
                 row.innerHTML = `
                     <td>
                         <a href="#" class="file-name" data-path="${item.path}" data-type="${item.type}">
@@ -240,6 +253,7 @@ function renderFileList(items) {
                         </a>
                     </td>
                     <td>${sizeText}</td>
+                    <td>${modifiedTime}</td>
                     <td class="file-actions">
                         ${item.type === 'file' ? `
                             <button class="file-action-btn download-btn" title="下载" data-path="${item.path}">
@@ -263,6 +277,9 @@ function renderFileList(items) {
                 
                 fileListElement.appendChild(row);
             });
+            
+            // 更新统计信息
+            updateFileStats(items.length, totalSize);
         }
         
         // 添加事件监听器
@@ -277,6 +294,20 @@ function renderFileList(items) {
             fileListElement.classList.remove('fade-in');
         }, 500);
     }, 300); // 等待淡出动画完成
+}
+
+// 更新文件统计信息
+function updateFileStats(totalItems, totalSize) {
+    const totalFilesElement = document.getElementById('total-files');
+    const totalSizeElement = document.getElementById('total-size');
+    
+    if (totalFilesElement) {
+        totalFilesElement.textContent = totalItems;
+    }
+    
+    if (totalSizeElement) {
+        totalSizeElement.textContent = formatFileSize(totalSize);
+    }
 }
 
 // 添加文件列表事件监听器
@@ -1062,11 +1093,11 @@ function showNotification(message, type = 'info') {
     notification.innerHTML = `
         <i class="fas fa-${icon}"></i>
         <span>${message}</span>
-        <button class="close-btn"><i class="fas fa-times"></i></button>
+        <button class="close-notification"><i class="fas fa-times"></i></button>
     `;
     
     // 添加关闭按钮事件
-    notification.querySelector('.close-btn').addEventListener('click', () => {
+    notification.querySelector('.close-notification').addEventListener('click', () => {
         notification.classList.add('notification-hide');
         setTimeout(() => {
             notification.remove();

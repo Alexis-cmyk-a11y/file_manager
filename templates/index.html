@@ -6,7 +6,7 @@
     <title>文件管理系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- 加载指示器 -->
@@ -20,39 +20,65 @@
     
     <div class="container">
         <header>
-            <h1>文件管理系统</h1>
-            <div class="header-decoration">
-                <div class="decoration-circle"></div>
-                <div class="decoration-circle"></div>
-                <div class="decoration-circle"></div>
+            <div class="header-content">
+                <h1>文件管理系统</h1>
+                <p class="header-subtitle">高效、安全、易用的文件管理解决方案</p>
             </div>
         </header>
 
         <main>
             <div class="file-explorer">
                 <div class="breadcrumb-container">
+                    <div class="breadcrumb-header">
+                        <i class="fas fa-folder-open"></i>
+                        <span>当前位置</span>
+                    </div>
                     <ol class="breadcrumb" id="breadcrumb">
-                        <li class="breadcrumb-item"><a href="#" data-path="">根目录</a></li>
+                        <li class="breadcrumb-item"><a href="#" data-path=""><i class="fas fa-home"></i> 根目录</a></li>
                     </ol>
                 </div>
 
                 <div class="actions">
-                    <button id="upload-btn" class="action-btn">
-                        <i class="fas fa-upload"></i> 上传
-                    </button>
-                    <button id="new-folder-btn" class="action-btn">
-                        <i class="fas fa-folder-plus"></i> 新建文件夹
-                    </button>
+                    <div class="action-group">
+                        <button id="upload-btn" class="action-btn primary">
+                            <i class="fas fa-upload"></i> 上传文件
+                        </button>
+                        <button id="new-folder-btn" class="action-btn secondary">
+                            <i class="fas fa-folder-plus"></i> 新建文件夹
+                        </button>
+                    </div>
+                    <div class="view-options">
+                        <button class="view-btn active" data-view="table">
+                            <i class="fas fa-table"></i>
+                        </button>
+                        <button class="view-btn" data-view="grid">
+                            <i class="fas fa-th"></i>
+                        </button>
+                    </div>
                     <input type="file" id="file-upload" style="display: none;" multiple>
                 </div>
 
                 <div class="file-list-container">
+                    <div class="file-stats">
+                        <span class="file-count">共 <span id="total-files">0</span> 个项目</span>
+                        <span class="storage-info">存储空间: <span id="total-size">0 B</span></span>
+                    </div>
+                    
                     <table class="file-list" id="file-table">
                         <thead>
                             <tr>
-                                <th class="name-col">名称</th>
-                                <th class="size-col">大小</th>
-                                <th class="actions-col">操作</th>
+                                <th class="name-col">
+                                    <i class="fas fa-file"></i> 名称
+                                </th>
+                                <th class="size-col">
+                                    <i class="fas fa-weight-hanging"></i> 大小
+                                </th>
+                                <th class="date-col">
+                                    <i class="fas fa-calendar"></i> 修改时间
+                                </th>
+                                <th class="actions-col">
+                                    <i class="fas fa-cogs"></i> 操作
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="file-list">
@@ -64,41 +90,58 @@
         </main>
     </div>
 
-    <!-- 模态框 -->
+    <!-- 新建文件夹模态框 -->
     <div class="modal" id="new-folder-modal">
-        <div class="modal-content">
-            <h3>新建文件夹</h3>
-            <input type="text" id="new-folder-name" placeholder="请输入文件夹名称">
-            <div class="modal-actions">
-                <button id="create-folder-btn">创建</button>
-                <button id="cancel-folder-btn">取消</button>
+        <div class="modal-header">
+            <h3><i class="fas fa-folder-plus"></i> 新建文件夹</h3>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="new-folder-name">文件夹名称</label>
+                <input type="text" id="new-folder-name" placeholder="请输入文件夹名称" autocomplete="off">
             </div>
+        </div>
+        <div class="modal-actions">
+            <button id="create-folder-btn" class="btn-primary">创建</button>
+            <button id="cancel-folder-btn" class="btn-secondary">取消</button>
         </div>
     </div>
 
+    <!-- 重命名模态框 -->
     <div class="modal" id="rename-modal">
-        <div class="modal-content">
-            <h3>重命名</h3>
-            <input type="text" id="rename-input" placeholder="请输入新名称">
-            <div class="modal-actions">
-                <button id="confirm-rename-btn">确认</button>
-                <button id="cancel-rename-btn">取消</button>
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> 重命名</h3>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="rename-input">新名称</label>
+                <input type="text" id="rename-input" placeholder="请输入新名称" autocomplete="off">
             </div>
+        </div>
+        <div class="modal-actions">
+            <button id="confirm-rename-btn" class="btn-primary">确认</button>
+            <button id="cancel-rename-btn" class="btn-secondary">取消</button>
         </div>
     </div>
 
+    <!-- 移动/复制模态框 -->
     <div class="modal" id="move-copy-modal">
-        <div class="modal-content">
-            <h3 id="move-copy-title">移动/复制</h3>
+        <div class="modal-header">
+            <h3 id="move-copy-title"><i class="fas fa-exchange-alt"></i> 移动/复制</h3>
+        </div>
+        <div class="modal-body">
             <div class="folder-tree-container">
+                <div class="tree-header">
+                    <i class="fas fa-sitemap"></i> 选择目标文件夹
+                </div>
                 <ul id="folder-tree" class="folder-tree">
                     <!-- 文件夹树将通过JavaScript动态生成 -->
                 </ul>
             </div>
-            <div class="modal-actions">
-                <button id="confirm-move-copy-btn">确认</button>
-                <button id="cancel-move-copy-btn">取消</button>
-            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="confirm-move-copy-btn" class="btn-primary">确认</button>
+            <button id="cancel-move-copy-btn" class="btn-secondary">取消</button>
         </div>
     </div>
 
