@@ -12,7 +12,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from .config import Config
+from core.config import Config
 
 # 全局limiter实例
 limiter = None
