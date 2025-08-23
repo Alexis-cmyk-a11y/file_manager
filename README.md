@@ -6,8 +6,8 @@
   
   [![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://python.org)
   [![Flask Version](https://img.shields.io/badge/flask-3.0+-green.svg)](https://flask.palletsprojects.com)
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 </div>
 
 ## 🌟 核心特性
@@ -23,6 +23,7 @@
 - **代码编辑器**: 基于 CodeMirror 6，支持 50+ 种语言
 - **语法高亮**: 智能语法检测和高亮显示
 - **搜索替换**: 正则表达式支持，批量替换
+- **Markdown预览**: 实时预览，支持所有基本语法
 - **多主题**: 默认、Monokai、Eclipse、Dracula 等
 - **智能功能**: 自动补全、括号匹配、代码折叠
 
@@ -682,7 +683,7 @@ black --check .
 
 ## 📄 许可证
 
-本项目基于 [MIT License](LICENSE) 开源协议发布。
+本项目基于 MIT License 开源协议发布。
 
 ```
 MIT License

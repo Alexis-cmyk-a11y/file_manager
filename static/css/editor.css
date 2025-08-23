@@ -587,3 +587,266 @@
 ::-webkit-scrollbar-thumb:hover {
     background: #6a6a6a;
 }
+
+/* 编辑器主区域 */
+.editor-main {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+}
+
+.code-editor {
+    flex: 1;
+    height: 100%;
+}
+
+/* Markdown预览样式 */
+.markdown-preview {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    background: #ffffff;
+    color: #333333;
+    border-left: 2px solid #007acc;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.markdown-preview.hidden {
+    display: none;
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    min-height: 50px;
+}
+
+.preview-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.preview-header i {
+    color: #007acc;
+    margin-right: 8px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.preview-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    line-height: 1.6;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Markdown内容样式 */
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4,
+.preview-content h5,
+.preview-content h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #24292e;
+}
+
+.preview-content h1 {
+    font-size: 2em;
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+}
+
+.preview-content h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+}
+
+.preview-content h3 {
+    font-size: 1.25em;
+}
+
+.preview-content h4 {
+    font-size: 1em;
+}
+
+.preview-content h5 {
+    font-size: 0.875em;
+}
+
+.preview-content h6 {
+    font-size: 0.85em;
+    color: #6a737d;
+}
+
+.preview-content p {
+    margin-bottom: 16px;
+    color: #24292e;
+}
+
+.preview-content blockquote {
+    margin: 0 0 16px 0;
+    padding: 0 1em;
+    color: #6a737d;
+    border-left: 0.25em solid #dfe2e5;
+}
+
+.preview-content ul,
+.preview-content ol {
+    margin-bottom: 16px;
+    padding-left: 2em;
+}
+
+.preview-content li {
+    margin-bottom: 4px;
+}
+
+.preview-content code {
+    background-color: rgba(27, 31, 35, 0.05);
+    border-radius: 3px;
+    font-size: 85%;
+    margin: 0;
+    padding: 0.2em 0.4em;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.preview-content pre {
+    background-color: #f6f8fa;
+    border-radius: 6px;
+    font-size: 85%;
+    line-height: 1.45;
+    overflow: auto;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.preview-content pre code {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.preview-content table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.preview-content table th,
+.preview-content table td {
+    border: 1px solid #dfe2e5;
+    padding: 6px 13px;
+}
+
+.preview-content table th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+}
+
+.preview-content table tr:nth-child(2n) {
+    background-color: #f6f8fa;
+}
+
+.preview-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+
+.preview-content hr {
+    height: 0.25em;
+    padding: 0;
+    margin: 24px 0;
+    background-color: #e1e4e8;
+    border: 0;
+}
+
+.preview-content a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+.preview-content a:hover {
+    text-decoration: underline;
+}
+
+.preview-content .link-placeholder {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px dashed #dee2e6;
+    font-style: italic;
+    cursor: not-allowed;
+}
+
+/* 预览模式下的编辑器调整 */
+.editor-main.preview-mode .code-editor {
+    width: 50%;
+}
+
+.editor-main.preview-mode .markdown-preview {
+    display: flex;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .markdown-preview {
+        width: 45%;
+    }
+    
+    .editor-main.preview-mode .code-editor {
+        width: 55%;
+    }
+}
+
+@media (max-width: 768px) {
+    .markdown-preview {
+        width: 100%;
+        height: 50%;
+        top: 50%;
+        border-left: none;
+        border-top: 2px solid #007acc;
+    }
+    
+    .editor-main.preview-mode .code-editor {
+        width: 100%;
+        height: 50%;
+    }
+    
+    .editor-main.preview-mode {
+        flex-direction: column;
+    }
+}

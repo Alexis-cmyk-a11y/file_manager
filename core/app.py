@@ -98,8 +98,33 @@ def register_page_routes(app):
     
     @app.route('/debug')
     def debug_page():
-        """调试测试页面"""
+        """调试页面"""
         return render_template('test_editor_debug.html')
+    
+    @app.route('/test_markdown')
+    def test_markdown_page():
+        """Markdown预览功能测试页面"""
+        return render_template('test_markdown.html')
+    
+    @app.route('/LICENSE')
+    def license_file():
+        """提供LICENSE文件"""
+        try:
+            with open('LICENSE', 'r', encoding='utf-8') as f:
+                content = f.read()
+            return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        except FileNotFoundError:
+            return 'License file not found', 404
+    
+    @app.route('/CONTRIBUTING.md')
+    def contributing_file():
+        """提供CONTRIBUTING.md文件"""
+        try:
+            with open('CONTRIBUTING.md', 'r', encoding='utf-8') as f:
+                content = f.read()
+            return content, 200, {'Content-Type': 'text/markdown; charset=utf-8'}
+        except FileNotFoundError:
+            return 'Contributing file not found', 404
 
 def register_error_handlers(app):
     """注册错误处理器"""

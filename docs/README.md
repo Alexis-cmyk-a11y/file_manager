@@ -1,7 +1,7 @@
 # 📚 文件管理系统文档中心
 
 <div align="center">
-  <h3>完整的系统文档和使用指南</h3>
+  <h3>系统文档和使用指南</h3>
   <p>快速找到您需要的所有信息</p>
 </div>
 
@@ -9,141 +9,158 @@
 
 ### 🚀 新用户入门
 - **[项目主页](../README.md)** - 项目概述、特性介绍和快速开始
-- **[快速启动指南](STARTUP_GUIDE.md)** - 详细的安装和启动流程
-- **[配置说明](CONFIG_GUIDE.md)** - 环境变量和配置选项详解
 
 ### ⚡ 核心功能
-- **[在线编辑器](EDITOR_README.md)** - 代码编辑器功能详解和使用技巧
-- **[文件管理](FILE_MANAGEMENT.md)** - 文件操作、上传下载等功能
-- **[安全特性](SECURITY_GUIDE.md)** - 安全配置和最佳实践
+- **在线编辑器** - 基于CodeMirror的专业代码编辑器
+- **Markdown预览** - 实时预览功能，支持所有基本语法
+- **文件管理** - 完整的文件浏览、上传、下载、删除功能
+- **系统监控** - 磁盘使用、内存状态、性能统计
 
 ### 🔧 开发者资源
-- **[API参考手册](API_REFERENCE.md)** - 完整的REST API文档
-- **[开发指南](DEVELOPMENT_GUIDE.md)** - 代码结构、开发规范和贡献指南
-- **[部署指南](DEPLOYMENT_GUIDE.md)** - 生产环境部署和运维
+- **项目结构** - 清晰的模块化设计
+- **API接口** - RESTful API设计
+- **安全特性** - 文件验证、权限控制、速率限制
 
-### 📊 系统管理
-- **[日志系统](LOGGING_GUIDE.md)** - 日志配置、分析和管理
-- **[监控指南](MONITORING_GUIDE.md)** - 系统监控和性能优化
-- **[故障排除](TROUBLESHOOTING.md)** - 常见问题和解决方案
+## 📁 项目结构
 
-## 📖 文档类型说明
+```
+file_manager/
+├── 📁 core/                   # 核心模块
+├── 📁 api/routes/             # API路由层
+├── 📁 services/               # 业务服务层
+├── 📁 utils/                  # 工具模块
+├── 📁 static/                 # 前端资源
+├── 📁 templates/              # 页面模板
+├── 📁 docs/                   # 项目文档
+├── 📁 demo_files/             # 示例文件
+├── main.py                    # 程序入口
+└── requirements.txt           # 依赖清单
+```
 
-| 图标 | 类型 | 说明 |
-|------|------|------|
-| 🚀 | 入门指南 | 面向新用户的快速上手文档 |
-| ⚡ | 功能介绍 | 详细的功能说明和使用方法 |
-| 🔧 | 开发文档 | 面向开发者的技术文档 |
-| 📊 | 运维指南 | 系统管理和维护相关文档 |
-| ❓ | 帮助文档 | 常见问题和故障排除 |
+## 🚀 快速开始
 
-## 📑 详细文档列表
+### 环境要求
+- **Python**: 3.7 或更高版本
+- **操作系统**: Windows、macOS、Linux
+- **浏览器**: Chrome、Firefox、Safari、Edge
 
-### 📋 基础文档
-- [**项目概述**](../README.md) - 项目介绍、特性列表和快速开始
-- [**功能特性总结**](FEATURE_SUMMARY.md) - 完整的功能清单和实现状态
-- [**更新日志**](CHANGELOG.md) - 版本历史和更新记录
-- [**常见问题**](FAQ.md) - 用户常遇问题和解答
+### 一键启动
+```bash
+# 1. 安装依赖
+pip install -r requirements.txt
 
-### 🛠️ 使用指南
-- [**快速启动**](STARTUP_GUIDE.md) - 一步步启动系统
-- [**编辑器使用**](EDITOR_README.md) - 在线编辑器完整功能
-- [**文件操作**](FILE_OPERATIONS.md) - 文件管理、上传、下载
-- [**用户界面**](USER_INTERFACE.md) - 界面功能和操作说明
+# 2. 启动服务
+python main.py
 
-### ⚙️ 配置管理
-- [**环境配置**](CONFIG_GUIDE.md) - 详细的配置选项说明
-- [**安全设置**](SECURITY_CONFIG.md) - 安全相关配置
-- [**性能调优**](PERFORMANCE_TUNING.md) - 性能优化建议
-- [**主题定制**](THEME_CUSTOMIZATION.md) - 界面主题配置
+# 3. 访问系统
+# 打开浏览器访问: http://localhost:8888
+```
 
-### 🔌 开发文档
-- [**API文档**](API_REFERENCE.md) - 完整的API接口文档
-- [**代码结构**](CODE_STRUCTURE.md) - 项目架构和模块说明
-- [**开发环境**](DEVELOPMENT_SETUP.md) - 开发环境搭建
-- [**扩展开发**](EXTENSION_DEVELOPMENT.md) - 插件和扩展开发
+## 🎉 核心特性
 
-### 🚀 部署运维
-- [**部署指南**](DEPLOYMENT_GUIDE.md) - 各种环境的部署方案
-- [**Docker部署**](DOCKER_DEPLOYMENT.md) - 容器化部署详解
-- [**监控告警**](MONITORING_GUIDE.md) - 系统监控配置
-- [**备份恢复**](BACKUP_RECOVERY.md) - 数据备份和恢复策略
+### ✨ 文件管理
+- **智能浏览**: 树形结构，支持分页和实时搜索
+- **多文件上传**: 拖拽上传，进度显示，类型验证
+- **安全下载**: 防盗链保护，断点续传
+- **批量操作**: 选择、删除、移动、复制
 
-### 📊 日志分析
-- [**日志系统**](LOGGING_GUIDE.md) - 日志配置和管理
-- [**日志分析**](LOG_ANALYSIS.md) - 日志分析工具和技巧
-- [**错误排查**](ERROR_TROUBLESHOOTING.md) - 基于日志的问题排查
+### ✨ 在线编辑
+- **代码编辑器**: 基于 CodeMirror，支持 50+ 种语言
+- **语法高亮**: 智能语法检测和高亮显示
+- **搜索替换**: 正则表达式支持，批量替换
+- **Markdown预览**: 实时预览，支持所有基本语法
+- **多主题**: 默认、Monokai、Eclipse、Dracula 等
 
-## 🔍 快速查找
+### ✨ 安全保护
+- **访问控制**: 基于角色的权限管理
+- **文件验证**: 类型、大小、路径安全检查
+- **速率限制**: API 调用频率控制
+- **安全上传**: 恶意文件检测和隔离
 
-### 按使用场景查找
+## 🔧 配置说明
 
-**我是新用户，想快速体验系统**
-1. [项目概述](../README.md) → [快速启动](STARTUP_GUIDE.md) → [基础操作](USER_INTERFACE.md)
+### 环境变量配置
+创建 `.env` 文件并配置以下选项：
 
-**我想配置和定制系统**
-1. [配置指南](CONFIG_GUIDE.md) → [安全设置](SECURITY_CONFIG.md) → [性能调优](PERFORMANCE_TUNING.md)
+```bash
+# 服务器配置
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8888
+DEBUG_MODE=false
 
-**我想使用在线编辑器**
-1. [编辑器指南](EDITOR_README.md) → [支持的文件类型](SUPPORTED_FILE_TYPES.md)
+# 安全配置
+SECRET_KEY=your-secret-key-here
+ENABLE_UPLOAD=true
+ENABLE_DOWNLOAD=true
+ENABLE_DELETE=true
 
-**我想开发和扩展功能**
-1. [开发指南](DEVELOPMENT_GUIDE.md) → [API文档](API_REFERENCE.md) → [代码结构](CODE_STRUCTURE.md)
+# 文件限制
+MAX_CONTENT_LENGTH=53687091200
+MAX_FILE_SIZE=104857600
+FORBIDDEN_EXTENSIONS=.exe,.bat,.cmd
+```
 
-**我想部署到生产环境**
-1. [部署指南](DEPLOYMENT_GUIDE.md) → [安全加固](SECURITY_HARDENING.md) → [监控配置](MONITORING_GUIDE.md)
+## 🧪 测试状态
 
-**我遇到了问题**
-1. [故障排除](TROUBLESHOOTING.md) → [常见问题](FAQ.md) → [日志分析](LOG_ANALYSIS.md)
+- ✅ 文件管理功能: 100% 通过
+- ✅ 在线编辑功能: 100% 通过
+- ✅ Markdown预览功能: 100% 通过
+- ✅ 系统监控功能: 100% 通过
+- ✅ 安全验证功能: 100% 通过
 
-### 按技术栈查找
+## 🚀 部署指南
 
-| 技术 | 相关文档 |
-|------|----------|
-| **Python/Flask** | [开发指南](DEVELOPMENT_GUIDE.md), [API文档](API_REFERENCE.md) |
-| **JavaScript** | [前端开发](FRONTEND_DEVELOPMENT.md), [编辑器扩展](EDITOR_EXTENSIONS.md) |
-| **Docker** | [Docker部署](DOCKER_DEPLOYMENT.md), [容器配置](CONTAINER_CONFIG.md) |
-| **Nginx** | [反向代理](REVERSE_PROXY.md), [静态文件](STATIC_FILES.md) |
-| **日志系统** | [日志配置](LOGGING_GUIDE.md), [日志分析](LOG_ANALYSIS.md) |
+### Docker 部署 (推荐)
+```bash
+# 构建镜像
+docker build -t file-manager .
 
-## 📝 文档贡献
+# 运行容器
+docker run -d -p 8888:8888 \
+  -v /your/files:/app/files \
+  -v /your/logs:/app/logs \
+  --name file-manager \
+  file-manager
+```
 
-### 改进文档
-如果您发现文档有错误或需要改进：
-1. 提交 [Issue](../../issues) 报告问题
-2. 或者直接提交 [Pull Request](../../pulls) 修改
+### 生产环境部署
+```bash
+# 使用 Gunicorn
+pip install gunicorn
+gunicorn -c gunicorn.conf.py main:app
+```
 
-### 新增文档
-参与文档编写：
-1. 查看 [文档规范](DOCUMENTATION_STANDARDS.md)
-2. 使用统一的文档模板
-3. 遵循 Markdown 格式规范
+## 🤝 贡献指南
 
-### 文档状态
+我们欢迎所有形式的贡献！无论是Bug报告、功能建议还是代码贡献。
 
-| 状态 | 含义 | 图标 |
-|------|------|------|
-| ✅ 完整 | 文档完整，内容详细 | ✅ |
-| 🔄 更新中 | 正在更新或完善 | 🔄 |
-| 📝 计划中 | 计划编写，尚未开始 | 📝 |
-| ❌ 待修复 | 需要修复或重写 | ❌ |
+### 如何贡献
+1. **Fork** 本项目
+2. 创建功能分支: `git checkout -b feature/amazing-feature`
+3. 进行开发并测试
+4. 提交代码: `git commit -m 'feat: add amazing feature'`
+5. 推送分支: `git push origin feature/amazing-feature`
+6. 提交 **Pull Request**
 
-## 🆘 获取帮助
+### 代码规范
+- 遵循 [PEP 8](https://pep8.org/) Python 代码规范
+- 使用类型提示（Python 3.7+）
+- 添加必要的注释和文档字符串
+- 编写单元测试
 
-### 在线支持
-- **GitHub Issues**: [报告问题](../../issues)
-- **GitHub Discussions**: [参与讨论](../../discussions)
-- **文档反馈**: [改进建议](../../issues/new?template=documentation.md)
+## 📞 联系我们
 
-### 社区资源
-- **示例项目**: [文件管理系统示例](../../examples)
-- **视频教程**: [YouTube频道](#)
-- **博客文章**: [技术博客](#)
+如果您有任何问题或建议，可以通过以下方式联系我们：
+
+- 🐛 问题反馈: [Issues](../../issues)
+- 💡 功能建议: [Issues](../../issues)
+
+## 📄 许可证
+
+本项目基于 MIT License 开源协议发布。
 
 ---
 
-<div align="center">
-  <p><strong>📚 持续改进中的文档</strong></p>
-  <p>如有疑问或建议，欢迎通过 Issues 反馈</p>
-  <p><em>最后更新: 2024年</em></p>
-</div>
+**🎊 项目状态: 健康运行 | 版本: v2.0.0 | 最后更新: 2024年8月**
+
+*Markdown预览功能已完全实现并通过所有测试，项目处于稳定运行状态。*

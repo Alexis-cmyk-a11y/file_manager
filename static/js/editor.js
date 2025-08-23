@@ -24,6 +24,14 @@ class FileEditor {
         this.undoRedoNotificationThreshold = 2000; // 撤销/重做通知间隔阈值(毫秒)
         this.showUndoRedoNotifications = true; // 是否显示撤销/重做通知
         
+        // Markdown预览功能
+        this.isPreviewMode = false;
+        this.markdownPreviewBtn = null;
+        this.markdownPreview = null;
+        this.previewContent = null;
+        this.closePreviewBtn = null;
+        this.previewUpdateTimeout = null; // 预览更新防抖超时
+        
         this.init();
     }
     
@@ -183,6 +191,24 @@ class FileEditor {
                 }, 200);
             }
         });
+        
+        // Markdown预览相关事件
+        this.markdownPreviewBtn = document.getElementById('markdown-preview-btn');
+        this.markdownPreview = document.getElementById('markdown-preview');
+        this.previewContent = document.getElementById('preview-content');
+        this.closePreviewBtn = document.getElementById('close-preview-btn');
+        
+        if (this.markdownPreviewBtn) {
+            this.markdownPreviewBtn.addEventListener('click', () => {
+                this.toggleMarkdownPreview();
+            });
+        }
+        
+        if (this.closePreviewBtn) {
+            this.closePreviewBtn.addEventListener('click', () => {
+                this.closeMarkdownPreview();
+            });
+        }
     }
     
     initializeEditor() {
@@ -292,6 +318,9 @@ class FileEditor {
                 // 初始化撤销/重做历史记录
                 this.clearHistory();
                 this.addToHistory(result.content);
+                
+                // 更新Markdown预览按钮状态
+                this.updateMarkdownPreviewButton();
                 
                 this.showNotification(`文件 ${result.name} 加载成功`, 'success');
             } else {
@@ -586,6 +615,17 @@ class FileEditor {
         
         // 更新状态栏
         this.updateStatusBar();
+        
+        // 如果正在预览Markdown，则实时更新预览
+        if (this.isPreviewMode && this.isMarkdownFile()) {
+            // 使用防抖来避免频繁更新预览
+            if (this.previewUpdateTimeout) {
+                clearTimeout(this.previewUpdateTimeout);
+            }
+            this.previewUpdateTimeout = setTimeout(() => {
+                this.renderMarkdownPreview();
+            }, 300); // 300ms 防抖延迟
+        }
     }
     
     toggleSearchPanel() {
@@ -1889,6 +1929,159 @@ class FileEditor {
         const savedThreshold = localStorage.getItem('undoRedoNotificationThreshold');
         if (savedThreshold !== null) {
             this.undoRedoNotificationThreshold = parseInt(savedThreshold);
+        }
+    }
+    
+    // Markdown预览相关方法
+    toggleMarkdownPreview() {
+        if (this.isPreviewMode) {
+            this.closeMarkdownPreview();
+        } else {
+            this.openMarkdownPreview();
+        }
+    }
+    
+    openMarkdownPreview() {
+        if (!this.currentFile || !this.isMarkdownFile()) {
+            this.showNotification('只有Markdown文件才能预览', 'warning');
+            return;
+        }
+        
+        this.isPreviewMode = true;
+        this.renderMarkdownPreview();
+        this.markdownPreview.classList.remove('hidden');
+        document.querySelector('.editor-main').classList.add('preview-mode');
+        this.markdownPreviewBtn.innerHTML = '<i class="fas fa-eye-slash"></i> 关闭预览';
+        this.markdownPreviewBtn.classList.add('active');
+        
+        this.showNotification('Markdown预览已开启', 'success');
+    }
+    
+    closeMarkdownPreview() {
+        this.isPreviewMode = false;
+        this.markdownPreview.classList.add('hidden');
+        document.querySelector('.editor-main').classList.remove('preview-mode');
+        this.markdownPreviewBtn.innerHTML = '<i class="fas fa-eye"></i> 预览';
+        this.markdownPreviewBtn.classList.remove('active');
+        
+        this.showNotification('Markdown预览已关闭', 'info');
+    }
+    
+    renderMarkdownPreview() {
+        if (!this.previewContent || !this.currentFile) return;
+        
+        const content = this.getCurrentEditorContent();
+        const html = this.markdownToHtml(content);
+        this.previewContent.innerHTML = html;
+    }
+    
+    getCurrentEditorContent() {
+        let content = '';
+        
+        if (this.editor && this.editor.getValue) {
+            // CodeMirror 5 API
+            content = this.editor.getValue();
+        } else if (this.editor && this.editor.state && this.editor.state.doc) {
+            // CodeMirror 6 API
+            content = this.editor.state.doc.toString();
+        } else {
+            // 原生textarea
+            const fallbackEditor = document.getElementById('fallback-editor');
+            if (fallbackEditor) {
+                content = fallbackEditor.value;
+            }
+        }
+        
+        return content || '';
+    }
+    
+    markdownToHtml(markdown) {
+        // 简单的Markdown到HTML转换
+        let html = markdown
+            // 转义HTML特殊字符
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        
+        // 处理相对链接，避免404错误
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+            // 如果是相对路径且不是以#开头的锚点，则添加安全处理
+            if (url.startsWith('#') || url.startsWith('http') || url.startsWith('mailto:')) {
+                return `<a href="${url}" target="_blank">${text}</a>`;
+            } else {
+                // 对于相对路径，显示为普通文本，避免404错误
+                return `<span class="link-placeholder">${text}</span>`;
+            }
+        });
+        
+        // 标题
+        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+        
+        // 粗体和斜体
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+        html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+        
+        // 代码块
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // 链接
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        
+        // 图片
+        html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+        
+        // 列表
+        html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
+        html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+        html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+        
+        // 将连续的li标签包装在ul/ol中
+        html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+        
+        // 引用
+        html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+        
+        // 水平线
+        html = html.replace(/^---$/gim, '<hr>');
+        
+        // 段落
+        html = html.replace(/\n\n/g, '</p><p>');
+        html = '<p>' + html + '</p>';
+        
+        // 清理空段落
+        html = html.replace(/<p><\/p>/g, '');
+        html = html.replace(/<p>\s*<\/p>/g, '');
+        
+        return html;
+    }
+    
+    isMarkdownFile() {
+        if (!this.currentFile) return false;
+        
+        const fileName = this.currentFile.name.toLowerCase();
+        const markdownExtensions = ['.md', '.markdown', '.mdown', '.mkd', '.mkdn'];
+        
+        return markdownExtensions.some(ext => fileName.endsWith(ext));
+    }
+    
+    updateMarkdownPreviewButton() {
+        if (!this.markdownPreviewBtn) return;
+        
+        if (this.isMarkdownFile()) {
+            this.markdownPreviewBtn.style.display = 'inline-block';
+        } else {
+            this.markdownPreviewBtn.style.display = 'none';
+            // 如果不是Markdown文件且正在预览，则关闭预览
+            if (this.isPreviewMode) {
+                this.closeMarkdownPreview();
+            }
         }
     }
 }
