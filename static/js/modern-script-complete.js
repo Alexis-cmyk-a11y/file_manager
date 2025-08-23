@@ -173,10 +173,19 @@ async function loadFileList() {
     try {
         showLoading(true);
         
-        const url = `/api/list?path=${encodeURIComponent(currentPath)}`;
+        // 添加时间戳参数来破坏浏览器缓存
+        const timestamp = Date.now();
+        const url = `/api/list?path=${encodeURIComponent(currentPath)}&_t=${timestamp}`;
         console.log("请求URL：", url);
         
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
         console.log("收到响应：", response.status, response.statusText);
         
         const data = await response.json();
@@ -564,10 +573,31 @@ async function uploadFiles() {
         const data = await response.json();
         
         if (response.ok) {
-            showNotification('文件上传成功', 'success');
-            loadFileList(); // 重新加载文件列表
+            // 检查是否有部分文件上传失败
+            if (data.errors && data.errors.length > 0) {
+                // 有错误，显示详细的错误信息
+                if (data.total_uploaded > 0) {
+                    showNotification(`成功上传 ${data.total_uploaded} 个文件，但有 ${data.errors.length} 个文件失败`, 'warning');
+                    // 显示详细错误信息
+                    showDetailedErrors(data.errors, '部分文件上传失败');
+                } else {
+                    showNotification('所有文件上传失败', 'error');
+                    // 显示详细错误信息
+                    showDetailedErrors(data.errors, '文件上传失败详情');
+                    return; // 不刷新文件列表
+                }
+            } else {
+                // 所有文件都上传成功
+                showNotification(`成功上传 ${data.total_uploaded || data.files?.length || 0} 个文件`, 'success');
+            }
+            
+            console.log("上传完成，准备刷新文件列表...");
+            // 强制刷新文件列表
+            await loadFileList();
+            console.log("文件列表刷新完成");
         } else {
-            showNotification(data.message, 'error');
+            // 服务器返回错误
+            showNotification(data.message || '上传失败', 'error');
         }
     } catch (error) {
         const errorMsg = '上传文件时发生错误: ' + error.message;
@@ -575,6 +605,56 @@ async function uploadFiles() {
     } finally {
         showLoading(false);
         fileUploadInput.value = ''; // 清空文件输入
+    }
+}
+
+// 显示详细错误信息
+function showDetailedErrors(errors, title) {
+    // 创建错误详情模态框
+    const errorModal = document.createElement('div');
+    errorModal.className = 'modal';
+    errorModal.id = 'error-details-modal';
+    errorModal.style.display = 'block';
+    
+    errorModal.innerHTML = `
+        <div class="modal-header">
+            <h3><i class="fas fa-exclamation-triangle"></i> ${title}</h3>
+        </div>
+        <div class="modal-body">
+            <div class="error-list">
+                ${errors.map(error => `<div class="error-item">• ${error}</div>`).join('')}
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="close-error-modal" class="btn-secondary">关闭</button>
+        </div>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(errorModal);
+    
+    // 显示遮罩
+    if (overlay) {
+        overlay.style.display = 'block';
+    }
+    
+    // 居中显示模态框
+    centerModal(errorModal);
+    
+    // 绑定关闭事件
+    document.getElementById('close-error-modal').addEventListener('click', () => {
+        document.body.removeChild(errorModal);
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    });
+    
+    // 点击遮罩关闭
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            document.body.removeChild(errorModal);
+            overlay.style.display = 'none';
+        });
     }
 }
 
@@ -629,7 +709,10 @@ async function createFolder() {
         
         if (response.ok) {
             showNotification('文件夹创建成功', 'success');
-            loadFileList(); // 重新加载文件列表
+            console.log("文件夹创建成功，准备刷新文件列表...");
+            // 强制刷新文件列表
+            await loadFileList();
+            console.log("文件列表刷新完成");
         } else {
             showNotification(data.message, 'error');
         }
@@ -689,7 +772,10 @@ async function confirmRename() {
         
         if (response.ok) {
             showNotification('重命名成功', 'success');
-            loadFileList(); // 重新加载文件列表
+            console.log("重命名成功，准备刷新文件列表...");
+            // 强制刷新文件列表
+            await loadFileList();
+            console.log("文件列表刷新完成");
         } else {
             showNotification(data.message, 'error');
         }
@@ -976,7 +1062,10 @@ async function confirmDelete(path, name, type) {
         
         if (response.ok) {
             showNotification('删除成功', 'success');
-            loadFileList(); // 重新加载文件列表
+            console.log("删除成功，准备刷新文件列表...");
+            // 强制刷新文件列表
+            await loadFileList();
+            console.log("文件列表刷新完成");
         } else {
             showNotification(data.message, 'error');
         }

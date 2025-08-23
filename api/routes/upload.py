@@ -32,7 +32,14 @@ def upload_file():
     try:
         upload_service = UploadService()
         result = upload_service.upload_files(uploaded_files, target_dir)
-        return jsonify(result)
+        
+        # 添加缓存控制头
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"文件上传失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500

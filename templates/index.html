@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件管理系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/local-fonts.css') }}">
 </head>
 <body>
     <!-- 加载指示器 -->
@@ -45,17 +45,6 @@
                         </button>
                         <button id="new-folder-btn" class="action-btn secondary">
                             <i class="fas fa-folder-plus"></i> 新建文件夹
-                        </button>
-                        <a href="/test_markdown" class="action-btn secondary" style="text-decoration: none;">
-                            <i class="fas fa-eye"></i> Markdown预览测试
-                        </a>
-                    </div>
-                    <div class="view-options">
-                        <button class="view-btn active" data-view="table">
-                            <i class="fas fa-table"></i>
-                        </button>
-                        <button class="view-btn" data-view="grid">
-                            <i class="fas fa-th"></i>
                         </button>
                     </div>
                     <input type="file" id="file-upload" style="display: none;" multiple>
@@ -150,6 +139,6 @@
 
     <div class="overlay" id="overlay"></div>
 
-    <script src="{{ url_for('static', filename='js/modern-script-complete.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='1.1') }}"></script>
 </body>
 </html>

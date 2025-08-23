@@ -42,7 +42,7 @@ class SecurityService:
         # 检查禁止的文件类型
         file_ext = os.path.splitext(filename)[1].lower()
         if file_ext in self.config.FORBIDDEN_EXTENSIONS:
-            return False, f"不允许上传 {file_ext} 类型的文件"
+            return False, f"不允许上传 {file_ext} 类型的文件（出于安全考虑，禁止上传可执行文件和脚本文件）"
         
         # 检查允许的文件类型（如果配置了的话）
         if hasattr(self.config, 'ALLOWED_EXTENSIONS') and self.config.ALLOWED_EXTENSIONS:

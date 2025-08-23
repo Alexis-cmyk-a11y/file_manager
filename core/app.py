@@ -58,6 +58,20 @@ def create_app(config_class=Config):
         default_limits=[config_class.RATE_LIMIT] if hasattr(config_class, 'RATE_LIMIT') else ["100 per minute"]
     )
     
+    # 初始化Redis服务
+    try:
+        from services.redis_service import get_redis_service, close_redis_service
+        redis_service = get_redis_service()
+        if redis_service.is_connected():
+            app.logger.info("Redis服务初始化成功")
+            app.redis_service = redis_service
+        else:
+            app.logger.warning("Redis服务初始化失败，将使用内存存储")
+            app.redis_service = None
+    except Exception as e:
+        app.logger.error(f"Redis服务初始化错误: {e}")
+        app.redis_service = None
+    
     # 注册蓝图
     register_blueprints(app)
     
@@ -95,16 +109,6 @@ def register_page_routes(app):
     def editor_page():
         """编辑器页面"""
         return render_template('editor.html')
-    
-    @app.route('/debug')
-    def debug_page():
-        """调试页面"""
-        return render_template('test_editor_debug.html')
-    
-    @app.route('/test_markdown')
-    def test_markdown_page():
-        """Markdown预览功能测试页面"""
-        return render_template('test_markdown.html')
     
     @app.route('/LICENSE')
     def license_file():

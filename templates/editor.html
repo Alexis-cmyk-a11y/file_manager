@@ -6,9 +6,9 @@
     <title>在线编辑器 - 文件管理系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/local-fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/codemirror.min.css') }}">
     <!-- 主题CSS文件已移除 -->
 </head>
 <body>
@@ -169,7 +169,7 @@
     <div class="overlay" id="overlay"></div>
 
     <!-- 引入CodeMirror -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+    <script src="{{ url_for('static', filename='js/codemirror.min.js') }}"></script>
     
     <!-- 引入编辑器脚本 -->
     <script src="{{ url_for('static', filename='js/editor.js') }}?v={{ range(1000000, 9999999) | random }}"></script>

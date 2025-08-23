@@ -19,7 +19,14 @@ def list_files():
     try:
         file_service = FileService()
         result = file_service.list_directory(rel_path)
-        return jsonify(result)
+        
+        # 添加缓存控制头，确保每次请求都返回最新数据
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"列出目录内容失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -37,7 +44,14 @@ def copy_item():
     try:
         file_service = FileService()
         result = file_service.copy_item(source_path, target_dir)
-        return jsonify(result)
+        
+        # 添加缓存控制头
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"复制失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -55,7 +69,14 @@ def move_item():
     try:
         file_service = FileService()
         result = file_service.move_item(source_path, target_dir)
-        return jsonify(result)
+        
+        # 添加缓存控制头
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"移动失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -72,7 +93,14 @@ def delete_item():
     try:
         file_service = FileService()
         result = file_service.delete_item(path)
-        return jsonify(result)
+        
+        # 添加缓存控制头
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"删除失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -90,7 +118,14 @@ def create_folder():
     try:
         file_service = FileService()
         result = file_service.create_folder(parent_dir, folder_name)
-        return jsonify(result)
+        
+        # 添加缓存控制头
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"创建文件夹失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -108,7 +143,14 @@ def rename_item():
     try:
         file_service = FileService()
         result = file_service.rename_item(path, new_name)
-        return jsonify(result)
+        
+        # 添加缓存控制头
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         current_app.logger.error(f"重命名失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500

@@ -11,6 +11,7 @@ import mimetypes
 
 from core.config import Config
 from services.security_service import SecurityService
+from services.cache_service import get_cache_service
 from utils.file_utils import FileUtils
 from utils.logger import get_logger
 
@@ -23,6 +24,7 @@ class FileService:
         self.config = Config()
         self.security_service = SecurityService()
         self.file_utils = FileUtils()
+        self.cache_service = get_cache_service()
     
     def list_directory(self, rel_path):
         """列出指定目录下的所有文件和子目录"""
@@ -45,6 +47,14 @@ class FileService:
             return {'success': False, 'message': '请求的路径不是目录'}
 
         try:
+            # 1. 先检查缓存 - 使用相对路径作为缓存键
+            cache_key = f"dir_listing:{rel_path}"
+            cached_result = self.cache_service.get(cache_key)
+            if cached_result:
+                logger.info(f"从缓存获取目录列表: {rel_path}")
+                return cached_result
+            
+            # 2. 如果缓存不存在，从文件系统读取
             items = self._get_directory_items(full_path, rel_path)
             
             # 计算目录统计信息
@@ -52,8 +62,7 @@ class FileService:
             total_dirs = len([item for item in items if item['type'] == 'directory'])
             total_size = sum(item['size'] for item in items if item['type'] == 'file')
             
-            logger.debug(f"目录 {full_path} 中找到 {len(items)} 个项目")
-            return {
+            result = {
                 'success': True,
                 'path': rel_path,
                 'items': items,
@@ -65,6 +74,13 @@ class FileService:
                     'total_size': total_size
                 }
             }
+            
+            # 3. 缓存结果（30秒过期，便于测试）
+            self.cache_service.set(cache_key, result, ttl=30)
+            logger.debug(f"目录 {full_path} 中找到 {len(items)} 个项目，已缓存")
+            
+            return result
+            
         except Exception as e:
             logger.error(f"列出目录内容失败: {full_path}, 错误: {str(e)}")
             return {'success': False, 'message': str(e)}
@@ -115,6 +131,15 @@ class FileService:
                 shutil.copytree(full_source_path, target_path)
                 logger.info(f"目录复制成功: {full_source_path} -> {target_path}")
             
+            # 清除相关缓存
+            self._invalidate_related_caches(target_path, 'create')
+            self._invalidate_directory_cache(target_dir)
+            
+            # 同时清除源目录的缓存，因为复制操作可能影响源目录的显示
+            source_dir = os.path.dirname(full_source_path)
+            if source_dir != full_target_dir:  # 避免重复清除
+                self._invalidate_directory_cache(source_dir)
+            
             return {
                 'success': True,
                 'message': f'{"文件" if is_file else "目录"} {source_name} 复制成功'
@@ -163,6 +188,11 @@ class FileService:
             shutil.move(full_source_path, target_path)
             logger.info(f"{'文件' if is_file else '目录'}移动成功: {full_source_path} -> {target_path}")
             
+            # 清除相关缓存
+            self._invalidate_related_caches(full_source_path, 'move')
+            self._invalidate_related_caches(target_path, 'move')
+            self._invalidate_directory_cache(target_dir)
+            
             return {
                 'success': True,
                 'message': f'{"文件" if is_file else "目录"} {source_name} 移动成功'
@@ -198,6 +228,9 @@ class FileService:
                 shutil.rmtree(full_path)
                 item_type = '目录'
                 logger.info(f"目录删除成功: {full_path}")
+            
+            # 清除相关缓存
+            self._invalidate_related_caches(full_path, 'delete')
             
             return {
                 'success': True,
@@ -241,6 +274,9 @@ class FileService:
             # 创建文件夹
             os.makedirs(full_path)
             logger.info(f"文件夹创建成功: {full_path}")
+            
+            # 清除父目录缓存
+            self._invalidate_directory_cache(parent_dir)
             
             return {
                 'success': True,
@@ -290,6 +326,10 @@ class FileService:
             os.rename(full_path, new_path)
             logger.info(f"重命名成功: {full_path} -> {new_path}")
             
+            # 清除相关缓存
+            self._invalidate_related_caches(full_path, 'rename')
+            self._invalidate_related_caches(new_path, 'rename')
+            
             # 计算相对路径
             rel_parent_dir = os.path.dirname(path)
             rel_new_path = os.path.join(rel_parent_dir, new_name).replace('\\', '/')
@@ -331,6 +371,13 @@ class FileService:
     def _get_file_info(self, file_path):
         """获取文件信息"""
         try:
+            # 1. 检查缓存
+            cache_key = f"file_info:{file_path}"
+            cached_info = self.cache_service.get(cache_key)
+            if cached_info:
+                return cached_info
+            
+            # 2. 从文件系统获取
             stat = os.stat(file_path)
             file_info = {
                 'name': os.path.basename(file_path),
@@ -350,7 +397,64 @@ class FileService:
                 except:
                     file_info['md5'] = None
             
+            # 3. 缓存结果（10分钟过期）
+            self.cache_service.set(cache_key, file_info, ttl=600)
+            
             return file_info
         except Exception as e:
             logger.error(f"获取文件信息失败: {file_path}, 错误: {str(e)}")
             return None
+
+    def _invalidate_related_caches(self, file_path, operation_type):
+        """使相关缓存失效
+        
+        Args:
+            file_path: 文件路径（绝对路径）
+            operation_type: 操作类型 (create, delete, modify, move)
+        """
+        try:
+            # 获取目录路径（绝对路径）
+            dir_path = os.path.dirname(file_path)
+            if dir_path == '':
+                dir_path = '.'
+            
+            # 使文件信息缓存失效
+            file_cache_key = f"file_info:{file_path}"
+            self.cache_service.delete(file_cache_key)
+            
+            # 计算相对路径（用于目录列表缓存）
+            try:
+                from core.config import Config
+                config = Config()
+                if file_path.startswith(config.ROOT_DIR):
+                    relative_dir = os.path.relpath(dir_path, config.ROOT_DIR)
+                    if relative_dir == '.':
+                        relative_dir = ''
+                else:
+                    relative_dir = dir_path
+            except:
+                relative_dir = dir_path
+            
+            # 使目录列表缓存失效（使用相对路径）
+            dir_cache_key = f"dir_listing:{relative_dir}"
+            self.cache_service.delete(dir_cache_key)
+            
+            logger.info(f"已清除相关缓存: {file_path} ({operation_type})")
+            logger.info(f"  绝对路径: {file_path}")
+            logger.info(f"  目录路径: {dir_path}")
+            logger.info(f"  相对路径: {relative_dir}")
+            logger.info(f"  文件缓存键: {file_cache_key}")
+            logger.info(f"  目录缓存键: {dir_cache_key}")
+            
+        except Exception as e:
+            logger.error(f"清除缓存失败: {e}")
+    
+    def _invalidate_directory_cache(self, dir_path):
+        """使目录缓存失效"""
+        try:
+            # 使用相对路径作为缓存键
+            dir_cache_key = f"dir_listing:{dir_path}"
+            self.cache_service.delete(dir_cache_key)
+            logger.debug(f"已清除目录缓存: {dir_path}")
+        except Exception as e:
+            logger.error(f"清除目录缓存失败: {e}")
