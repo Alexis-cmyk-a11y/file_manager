@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线编辑器 - 文件管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css" rel="stylesheet">
+    <!-- 主题CSS文件已移除 -->
+</head>
+<body>
+    <!-- 加载指示器 -->
+    <div id="loading-indicator">
+        <div class="spinner"></div>
+        <span>加载中...</span>
+    </div>
+    
+    <!-- 通知容器 -->
+    <div id="notification-container"></div>
+    
+    <div class="editor-container">
+        <!-- 编辑器头部 -->
+        <header class="editor-header">
+            <div class="header-left">
+                <button id="back-btn" class="header-btn">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <div class="file-info">
+                    <i class="fas fa-file-code"></i>
+                    <span id="file-name">未命名文件</span>
+                    <span id="file-path" class="file-path"></span>
+                </div>
+            </div>
+            <div class="header-center">
+                <div class="editor-controls">
+                    <button id="save-btn" class="control-btn primary">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button id="undo-btn" class="control-btn">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="redo-btn" class="control-btn">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="editor-options">
+                    <!-- 主题选择器和全屏按钮已移除 -->
+                </div>
+            </div>
+        </header>
+
+        <!-- 编辑器工具栏 -->
+        <div class="editor-toolbar">
+            <div class="toolbar-left">
+                <button id="search-btn" class="toolbar-btn">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+                <button id="replace-btn" class="toolbar-btn">
+                    <i class="fas fa-exchange-alt"></i> 替换
+                </button>
+                <button id="goto-line-btn" class="toolbar-btn">
+                    <i class="fas fa-location-arrow"></i> 跳转行
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <span id="cursor-position">行: 1, 列: 1</span>
+                <span id="file-encoding">编码: UTF-8</span>
+                <span id="line-count">行数: 0</span>
+            </div>
+        </div>
+
+        <!-- 搜索和替换面板 -->
+        <div id="search-panel" class="search-panel hidden">
+            <div class="search-controls">
+                <div class="search-input-group">
+                    <input type="text" id="search-input" placeholder="搜索..." class="search-input">
+                    <button id="search-prev" class="search-btn">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <button id="search-next" class="search-btn">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="search-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="case-sensitive">
+                        区分大小写
+                    </label>
+                </div>
+                <button id="close-search" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="replace-controls hidden" id="replace-controls">
+                <div class="replace-input-group">
+                    <input type="text" id="replace-input" placeholder="替换为..." class="replace-input">
+                    <button id="replace-btn-single" class="replace-btn">替换</button>
+                    <button id="replace-btn-all" class="replace-btn">全部替换</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主编辑器区域 -->
+        <div class="editor-main">
+            <div id="code-editor" class="code-editor"></div>
+        </div>
+
+        <!-- 状态栏 -->
+        <div class="editor-statusbar">
+            <div class="status-left">
+                <span id="status-message">就绪</span>
+            </div>
+            <div class="status-right">
+                <span id="file-size">大小: 0 B</span>
+                <span id="last-saved">最后保存: 未保存</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 跳转行模态框 -->
+    <div class="modal" id="goto-line-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-location-arrow"></i> 跳转到指定行</h3>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="goto-line-input">行号</label>
+                <input type="number" id="goto-line-input" placeholder="请输入行号" min="1" autocomplete="off">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="confirm-goto-btn" class="btn-primary">跳转</button>
+            <button id="cancel-goto-btn" class="btn-secondary">取消</button>
+        </div>
+    </div>
+
+    <!-- 确认保存模态框 -->
+    <div class="modal" id="save-confirm-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-save"></i> 确认保存</h3>
+        </div>
+        <div class="modal-body">
+            <p>文件已修改，是否保存更改？</p>
+        </div>
+        <div class="modal-actions">
+            <button id="confirm-save-btn" class="btn-primary">保存</button>
+            <button id="discard-save-btn" class="btn-secondary">不保存</button>
+            <button id="cancel-save-btn" class="btn-secondary">取消</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <!-- 引入CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+    
+    <!-- 引入编辑器脚本 -->
+    <script src="{{ url_for('static', filename='js/editor.js') }}?v={{ range(1000000, 9999999) | random }}"></script>
+</body>
+</html>

@@ -207,14 +207,10 @@ function renderFileList(items) {
     setTimeout(() => {
         fileListElement.innerHTML = '';
         
-        // 获取表格元素
-        const fileTable = document.getElementById('file-table');
-        
         if (items.length === 0) {
             // 显示空文件夹提示
             fileListElement.innerHTML = '<tr><td colspan="4" class="empty-message">当前文件夹为空</td></tr>';
         } else {
-            
             // 对项目进行排序：先文件夹，后文件，按名称字母顺序排序
             items.sort((a, b) => {
                 if (a.type !== b.type) {
@@ -243,11 +239,47 @@ function renderFileList(items) {
                 const iconClass = item.type === 'directory' ? 'fas fa-folder folder-icon' : getFileIconClass(item.name);
                 
                 // 获取修改时间
-                const modifiedTime = item.modified ? new Date(item.modified * 1000).toLocaleString('zh-CN') : '-';
+                let modifiedTime = '-';
+                if (item.modified) {
+                    try {
+                        // 处理Unix时间戳（秒）
+                        const timestamp = typeof item.modified === 'number' ? item.modified * 1000 : item.modified;
+                        const date = new Date(timestamp);
+                        
+                        // 检查日期是否有效
+                        if (!isNaN(date.getTime())) {
+                            modifiedTime = date.toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            });
+                        } else {
+                            modifiedTime = '无效日期';
+                        }
+                    } catch (error) {
+                        console.warn('日期格式化失败:', error);
+                        modifiedTime = '日期错误';
+                    }
+                }
+                
+                // 检查文件是否可编辑
+                const extension = item.name.split('.').pop().toLowerCase();
+                const editableExtensions = [
+                    'txt', 'md', 'log', 'py', 'js', 'ts', 'html', 'css', 'scss', 'sass',
+                    'java', 'cpp', 'c', 'h', 'hpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift',
+                    'kt', 'scala', 'sql', 'xml', 'json', 'yaml', 'yml', 'toml', 'ini', 'cfg',
+                    'conf', 'env', 'gitignore', 'dockerignore', 'editorconfig', 'eslintrc',
+                    'prettierrc', 'babelrc', 'csv', 'tsv', 'tex', 'bib', 'rst'
+                ];
+                const isEditable = item.type === 'file' && editableExtensions.includes(extension);
+                const editableClass = isEditable ? 'editable' : '';
                 
                 row.innerHTML = `
                     <td>
-                        <a href="#" class="file-name" data-path="${item.path}" data-type="${item.type}">
+                        <a href="#" class="file-name ${editableClass}" data-path="${item.path}" data-type="${item.type}">
                             <i class="${iconClass} file-icon"></i>
                             ${escapeHtml(item.name)}
                         </a>
@@ -258,6 +290,9 @@ function renderFileList(items) {
                         ${item.type === 'file' ? `
                             <button class="file-action-btn download-btn" title="下载" data-path="${item.path}">
                                 <i class="fas fa-download"></i>
+                            </button>
+                            <button class="file-action-btn edit-btn" title="编辑" data-path="${item.path}" data-name="${escapeHtml(item.name)}">
+                                <i class="fas fa-code"></i>
                             </button>
                         ` : ''}
                         <button class="file-action-btn rename-btn" title="重命名" data-path="${item.path}" data-name="${escapeHtml(item.name)}">
@@ -312,21 +347,46 @@ function updateFileStats(totalItems, totalSize) {
 
 // 添加文件列表事件监听器
 function addFileListEventListeners() {
+    console.log("开始添加文件列表事件监听器");
+    
     // 文件/文件夹点击事件
     document.querySelectorAll('.file-name').forEach(element => {
         element.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            
             const path = element.getAttribute('data-path');
             const type = element.getAttribute('data-type');
+            const fileName = element.textContent.trim();
+            
+            console.log("文件名点击事件触发:", { path, type, fileName });
             
             if (type === 'directory') {
                 // 打开文件夹
+                console.log("打开文件夹:", path);
                 currentPath = path;
                 loadFileList();
                 updateBreadcrumb();
             } else {
-                // 下载文件
-                downloadFile(path);
+                // 检查文件是否可编辑
+                const extension = fileName.split('.').pop().toLowerCase();
+                const editableExtensions = [
+                    'txt', 'md', 'log', 'py', 'js', 'ts', 'html', 'css', 'scss', 'sass',
+                    'java', 'cpp', 'c', 'h', 'hpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift',
+                    'kt', 'scala', 'sql', 'xml', 'json', 'yaml', 'yml', 'toml', 'ini', 'cfg',
+                    'conf', 'env', 'gitignore', 'dockerignore', 'editorconfig', 'eslintrc',
+                    'prettierrc', 'babelrc', 'csv', 'tsv', 'tex', 'bib', 'rst'
+                ];
+                
+                if (editableExtensions.includes(extension)) {
+                    // 可编辑文件，进入编辑器
+                    console.log("可编辑文件，进入编辑器:", path, fileName);
+                    openFileEditor(path, fileName);
+                } else {
+                    // 不可编辑文件，下载
+                    console.log("不可编辑文件，下载:", path, fileName);
+                    downloadFile(path);
+                }
             }
         });
     });
@@ -336,6 +396,15 @@ function addFileListEventListeners() {
         button.addEventListener('click', () => {
             const path = button.getAttribute('data-path');
             downloadFile(path);
+        });
+    });
+    
+    // 编辑按钮点击事件
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const path = button.getAttribute('data-path');
+            const name = button.getAttribute('data-name');
+            openFileEditor(path, name);
         });
     });
     
@@ -388,6 +457,8 @@ function addFileListEventListeners() {
             row.classList.remove('row-hover');
         });
     });
+    
+    console.log("文件列表事件监听器添加完成");
 }
 
 // 初始化面包屑导航事件处理
@@ -509,6 +580,7 @@ async function uploadFiles() {
 
 // 下载文件
 function downloadFile(path) {
+    console.log("下载文件:", path);
     window.location.href = `/api/download?path=${encodeURIComponent(path)}`;
 }
 
@@ -817,125 +889,6 @@ async function loadSubFolders(parentPath, container) {
     }
 }
 
-// 渲染文件夹树
-function renderFolderTree(items) {
-    // 过滤出所有文件夹
-    const folders = items.filter(item => item.type === 'directory');
-    
-    // 构建文件夹树结构
-    const tree = buildFolderTree(folders);
-    
-    // 清空文件夹树
-    folderTree.innerHTML = '';
-    
-    // 添加根文件夹
-    const rootFolder = document.createElement('div');
-    rootFolder.className = 'folder-item';
-    rootFolder.innerHTML = `
-        <div class="folder-name ${currentPath === '' ? 'selected' : ''}" data-path="">
-            <i class="fas fa-home"></i> 根目录
-        </div>
-    `;
-    
-    // 添加根文件夹点击事件
-    rootFolder.querySelector('.folder-name').addEventListener('click', function() {
-        // 移除所有选中状态
-        document.querySelectorAll('.folder-name.selected').forEach(el => {
-            el.classList.remove('selected');
-        });
-        
-        // 添加选中状态
-        this.classList.add('selected');
-    });
-    
-    folderTree.appendChild(rootFolder);
-    
-    // 添加子文件夹
-    renderSubFolders(tree, folderTree);
-}
-
-// 构建文件夹树结构
-function buildFolderTree(folders) {
-    const tree = {};
-    
-    folders.forEach(folder => {
-        const parts = folder.path.split('/');
-        let current = tree;
-        
-        parts.forEach(part => {
-            if (!current[part]) {
-                current[part] = {};
-            }
-            current = current[part];
-        });
-    });
-    
-    return tree;
-}
-
-// 渲染子文件夹
-function renderSubFolders(tree, parentElement, parentPath = '') {
-    const container = document.createElement('div');
-    container.className = 'subfolder-container';
-    
-    // 对文件夹名称进行排序
-    const folderNames = Object.keys(tree).sort();
-    
-    folderNames.forEach(name => {
-        const path = parentPath ? `${parentPath}/${name}` : name;
-        const folder = document.createElement('div');
-        folder.className = 'folder-item';
-        
-        const hasChildren = Object.keys(tree[name]).length > 0;
-        
-        folder.innerHTML = `
-            <div class="folder-name ${currentPath === path ? 'selected' : ''}" data-path="${path}">
-                ${hasChildren ? '<span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>' : '<span class="toggle-icon"></span>'}
-                <i class="fas fa-folder"></i> ${name}
-            </div>
-        `;
-        
-        // 添加文件夹点击事件
-        const folderNameEl = folder.querySelector('.folder-name');
-        folderNameEl.addEventListener('click', function(e) {
-            // 如果点击的是展开/折叠图标，只处理展开/折叠
-            if (e.target.closest('.toggle-icon')) {
-                const subContainer = this.parentElement.querySelector('.subfolder-container');
-                if (subContainer) {
-                    subContainer.classList.toggle('expanded');
-                    const icon = this.querySelector('.toggle-icon i');
-                    if (icon) {
-                        icon.classList.toggle('collapsed');
-                    }
-                }
-                return;
-            }
-            
-            // 移除所有选中状态
-            document.querySelectorAll('.folder-name.selected').forEach(el => {
-                el.classList.remove('selected');
-            });
-            
-            // 添加选中状态
-            this.classList.add('selected');
-        });
-        
-        container.appendChild(folder);
-        
-        // 如果有子文件夹，递归渲染
-        if (hasChildren) {
-            const subContainer = document.createElement('div');
-            subContainer.className = 'subfolder-container';
-            folder.appendChild(subContainer);
-            renderSubFolders(tree[name], subContainer, path);
-        }
-    });
-    
-    if (folderNames.length > 0) {
-        parentElement.appendChild(container);
-    }
-}
-
 // 确认移动/复制
 async function confirmMoveCopy() {
     // 获取选中的目标文件夹
@@ -1100,7 +1053,9 @@ function showNotification(message, type = 'info') {
     notification.querySelector('.close-notification').addEventListener('click', () => {
         notification.classList.add('notification-hide');
         setTimeout(() => {
-            notification.remove();
+            if (notification.parentNode) {
+                notification.remove();
+            }
         }, 300);
     });
     
@@ -1212,4 +1167,29 @@ function getFileIconClass(filename) {
     
     // 默认文件图标
     return 'fas fa-file';
+}
+
+// 打开文件编辑器
+function openFileEditor(filePath, fileName) {
+    console.log("打开文件编辑器:", filePath, fileName);
+    
+    // 检查文件是否支持编辑
+    const extension = fileName.split('.').pop().toLowerCase();
+    const editableExtensions = [
+        'txt', 'md', 'log', 'py', 'js', 'ts', 'html', 'css', 'scss', 'sass',
+        'java', 'cpp', 'c', 'h', 'hpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift',
+        'kt', 'scala', 'sql', 'xml', 'json', 'yaml', 'yml', 'toml', 'ini', 'cfg',
+        'conf', 'env', 'gitignore', 'dockerignore', 'editorconfig', 'eslintrc',
+        'prettierrc', 'babelrc', 'csv', 'tsv', 'tex', 'bib', 'rst'
+    ];
+    
+    if (!editableExtensions.includes(extension)) {
+        showNotification(`文件类型 .${extension} 不支持编辑`, 'warning');
+        return;
+    }
+    
+    // 跳转到编辑器页面
+    const editorUrl = `/editor?file=${encodeURIComponent(filePath)}`;
+    console.log("跳转到编辑器:", editorUrl);
+    window.open(editorUrl, '_blank');
 }

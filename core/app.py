@@ -5,14 +5,13 @@
 
 import os
 import sys
-import logging
-from logging.handlers import RotatingFileHandler
-from flask import Flask
+from flask import Flask, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from core.config import Config
+from utils.logger import setup_logging, get_logger
 
 # 全局limiter实例
 limiter = None
@@ -42,8 +41,12 @@ def create_app(config_class=Config):
     app.static_folder = resource_path('static')
     app.template_folder = resource_path('templates')
     
-    # 配置日志
-    setup_logging(app, config_class)
+    # 配置日志系统
+    logger_manager = setup_logging(config_class())
+    app.logger_manager = logger_manager
+    
+    # 获取应用日志记录器
+    app.logger = get_logger('file_manager.app')
     
     # 启用CORS
     CORS(app)
@@ -64,41 +67,39 @@ def create_app(config_class=Config):
     # 注册中间件
     register_middleware(app)
     
+    # 注册页面路由
+    register_page_routes(app)
+    
     return app
 
-def setup_logging(app, config_class):
-    """配置应用日志"""
-    log_level = getattr(logging, config_class.LOG_LEVEL)
-    log_formatter = logging.Formatter(config_class.LOG_FORMAT)
-    
-    # 创建日志处理器
-    file_handler = RotatingFileHandler(
-        config_class.LOG_FILE, 
-        maxBytes=config_class.LOG_MAX_SIZE, 
-        backupCount=config_class.LOG_BACKUP_COUNT,
-        encoding='utf-8'
-    )
-    file_handler.setFormatter(log_formatter)
-    
-    # 配置应用日志
-    app.logger.setLevel(log_level)
-    app.logger.addHandler(file_handler)
-    
-    # 同时输出到控制台
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_formatter)
-    app.logger.addHandler(console_handler)
-    
-    app.logger.info("应用启动，根目录设置为: %s", config_class.ROOT_DIR)
+
 
 def register_blueprints(app):
     """注册蓝图"""
-    from api.routes import file_ops, upload, download, system
+    from api.routes import file_ops, upload, download, system, editor
     
     app.register_blueprint(file_ops.bp)
     app.register_blueprint(upload.bp)
     app.register_blueprint(download.bp)
     app.register_blueprint(system.bp)
+    app.register_blueprint(editor.bp)
+
+def register_page_routes(app):
+    """注册页面路由"""
+    @app.route('/')
+    def index():
+        """主页 - 文件管理器"""
+        return render_template('index.html')
+    
+    @app.route('/editor')
+    def editor_page():
+        """编辑器页面"""
+        return render_template('editor.html')
+    
+    @app.route('/debug')
+    def debug_page():
+        """调试测试页面"""
+        return render_template('test_editor_debug.html')
 
 def register_error_handlers(app):
     """注册错误处理器"""

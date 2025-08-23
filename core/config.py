@@ -33,10 +33,19 @@ class Config:
     
     # 日志配置
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-    LOG_FORMAT = os.getenv('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    LOG_FILE = os.getenv('LOG_FILE', 'file_manager.log')
+    LOG_FORMAT = os.getenv('LOG_FORMAT', 'json')  # 支持 'json' 或传统格式
+    LOG_FILE = os.getenv('LOG_FILE', 'logs/file_manager.log')
     LOG_MAX_SIZE = int(os.getenv('LOG_MAX_SIZE', 10 * 1024 * 1024))  # 10MB
-    LOG_BACKUP_COUNT = int(os.getenv('LOG_BACKUP_COUNT', 5))
+    LOG_BACKUP_COUNT = int(os.getenv('LOG_BACKUP_COUNT', 30))  # 保留30天的日志
+    
+    # 高级日志配置
+    LOG_ENABLE_CONSOLE = os.getenv('LOG_ENABLE_CONSOLE', 'true').lower() == 'true'
+    LOG_ENABLE_FILE = os.getenv('LOG_ENABLE_FILE', 'true').lower() == 'true'
+    LOG_ENABLE_JSON = os.getenv('LOG_ENABLE_JSON', 'true').lower() == 'true'
+    LOG_ENABLE_COLOR = os.getenv('LOG_ENABLE_COLOR', 'true').lower() == 'true'
+    LOG_ROTATION_WHEN = os.getenv('LOG_ROTATION_WHEN', 'midnight')  # midnight, hour, day
+    LOG_ROTATION_INTERVAL = int(os.getenv('LOG_ROTATION_INTERVAL', 1))
+    LOG_COMPRESS_OLD = os.getenv('LOG_COMPRESS_OLD', 'true').lower() == 'true'
 
     # 界面配置
     APP_NAME = os.getenv('APP_NAME', "文件管理系统")
@@ -108,8 +117,18 @@ class Config:
             self.STATIC_COMPRESS = True
             self.LOG_LEVEL = 'WARNING'
         
+        # 确保日志文件路径是绝对路径
+        self._setup_log_file_path()
+        
         # 动态配置文件类型限制
         self._setup_file_extensions()
+    
+    def _setup_log_file_path(self):
+        """确保日志文件路径是绝对路径"""
+        if not os.path.isabs(self.LOG_FILE):
+            # 如果是相对路径，则相对于项目根目录
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            self.LOG_FILE = os.path.normpath(os.path.join(project_root, self.LOG_FILE))
     
     def _setup_file_extensions(self):
         """动态设置文件扩展名限制"""

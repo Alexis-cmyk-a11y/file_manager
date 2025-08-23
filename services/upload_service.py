@@ -5,13 +5,13 @@
 
 import os
 import hashlib
-import logging
 from werkzeug.utils import secure_filename
 
 from core.config import Config
 from services.security_service import SecurityService
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class UploadService:
     """上传服务类"""

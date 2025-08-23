@@ -4,12 +4,12 @@
 """
 
 import os
-import logging
 
 from core.config import Config
 from services.security_service import SecurityService
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class DownloadService:
     """下载服务类"""

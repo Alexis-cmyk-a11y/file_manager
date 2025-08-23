@@ -1,165 +1,149 @@
-# 文件管理系统 - 重构版本
+# 📚 文件管理系统文档中心
 
-## 项目概述
+<div align="center">
+  <h3>完整的系统文档和使用指南</h3>
+  <p>快速找到您需要的所有信息</p>
+</div>
 
-本项目是一个基于Flask的文件管理系统，经过重构后采用了模块化架构，提高了代码的可维护性和可扩展性。
+## 🎯 快速导航
 
-## 架构设计
+### 🚀 新用户入门
+- **[项目主页](../README.md)** - 项目概述、特性介绍和快速开始
+- **[快速启动指南](STARTUP_GUIDE.md)** - 详细的安装和启动流程
+- **[配置说明](CONFIG_GUIDE.md)** - 环境变量和配置选项详解
 
-### 模块结构
+### ⚡ 核心功能
+- **[在线编辑器](EDITOR_README.md)** - 代码编辑器功能详解和使用技巧
+- **[文件管理](FILE_MANAGEMENT.md)** - 文件操作、上传下载等功能
+- **[安全特性](SECURITY_GUIDE.md)** - 安全配置和最佳实践
 
-```
-file_manager/
-├── core/                   # 核心模块
-│   ├── __init__.py        # 核心模块初始化
-│   ├── app.py            # 应用工厂
-│   └── config.py         # 配置管理
-├── api/                   # API接口模块
-│   ├── __init__.py       # API模块初始化
-│   └── routes/           # 路由定义
-│       ├── __init__.py
-│       ├── file_ops.py   # 文件操作API
-│       ├── upload.py     # 上传API
-│       ├── download.py   # 下载API
-│       └── system.py     # 系统信息API
-├── services/              # 业务逻辑服务层
-│   ├── __init__.py       # 服务层初始化
-│   ├── file_service.py   # 文件操作服务
-│   ├── upload_service.py # 上传服务
-│   ├── download_service.py # 下载服务
-│   ├── security_service.py # 安全服务
-│   └── system_service.py # 系统信息服务
-├── utils/                 # 工具函数模块
-│   ├── __init__.py       # 工具模块初始化
-│   └── file_utils.py     # 文件工具类
-├── models/                # 数据模型
-├── middleware/            # 中间件
-├── tests/                 # 测试文件
-├── docs/                  # 文档
-├── static/                # 静态资源
-├── templates/             # 模板文件
-├── main.py               # 主入口文件
-└── requirements.txt       # 依赖包
-```
+### 🔧 开发者资源
+- **[API参考手册](API_REFERENCE.md)** - 完整的REST API文档
+- **[开发指南](DEVELOPMENT_GUIDE.md)** - 代码结构、开发规范和贡献指南
+- **[部署指南](DEPLOYMENT_GUIDE.md)** - 生产环境部署和运维
 
-### 架构特点
+### 📊 系统管理
+- **[日志系统](LOGGING_GUIDE.md)** - 日志配置、分析和管理
+- **[监控指南](MONITORING_GUIDE.md)** - 系统监控和性能优化
+- **[故障排除](TROUBLESHOOTING.md)** - 常见问题和解决方案
 
-1. **分层架构**: 采用经典的三层架构（表现层、业务逻辑层、数据访问层）
-2. **模块化设计**: 每个功能模块独立，便于维护和扩展
-3. **服务层模式**: 业务逻辑集中在服务层，提高代码复用性
-4. **工厂模式**: 使用应用工厂模式创建Flask应用实例
-5. **蓝图模式**: 使用Flask蓝图组织API路由
+## 📖 文档类型说明
 
-## 核心模块说明
+| 图标 | 类型 | 说明 |
+|------|------|------|
+| 🚀 | 入门指南 | 面向新用户的快速上手文档 |
+| ⚡ | 功能介绍 | 详细的功能说明和使用方法 |
+| 🔧 | 开发文档 | 面向开发者的技术文档 |
+| 📊 | 运维指南 | 系统管理和维护相关文档 |
+| ❓ | 帮助文档 | 常见问题和故障排除 |
 
-### Core模块
-- **app.py**: 应用工厂，负责创建和配置Flask应用
-- **config.py**: 配置管理，支持环境变量和环境特定配置
+## 📑 详细文档列表
 
-### API模块
-- **file_ops.py**: 文件操作相关API（列表、复制、移动、删除、重命名、创建文件夹）
-- **upload.py**: 文件上传API
-- **download.py**: 文件下载API
-- **system.py**: 系统信息API
+### 📋 基础文档
+- [**项目概述**](../README.md) - 项目介绍、特性列表和快速开始
+- [**功能特性总结**](FEATURE_SUMMARY.md) - 完整的功能清单和实现状态
+- [**更新日志**](CHANGELOG.md) - 版本历史和更新记录
+- [**常见问题**](FAQ.md) - 用户常遇问题和解答
 
-### Services模块
-- **file_service.py**: 文件操作的核心业务逻辑
-- **upload_service.py**: 文件上传业务逻辑
-- **download_service.py**: 文件下载业务逻辑
-- **security_service.py**: 安全验证业务逻辑
-- **system_service.py**: 系统信息业务逻辑
+### 🛠️ 使用指南
+- [**快速启动**](STARTUP_GUIDE.md) - 一步步启动系统
+- [**编辑器使用**](EDITOR_README.md) - 在线编辑器完整功能
+- [**文件操作**](FILE_OPERATIONS.md) - 文件管理、上传、下载
+- [**用户界面**](USER_INTERFACE.md) - 界面功能和操作说明
 
-### Utils模块
-- **file_utils.py**: 文件操作相关的工具函数
+### ⚙️ 配置管理
+- [**环境配置**](CONFIG_GUIDE.md) - 详细的配置选项说明
+- [**安全设置**](SECURITY_CONFIG.md) - 安全相关配置
+- [**性能调优**](PERFORMANCE_TUNING.md) - 性能优化建议
+- [**主题定制**](THEME_CUSTOMIZATION.md) - 界面主题配置
 
-## 使用方法
+### 🔌 开发文档
+- [**API文档**](API_REFERENCE.md) - 完整的API接口文档
+- [**代码结构**](CODE_STRUCTURE.md) - 项目架构和模块说明
+- [**开发环境**](DEVELOPMENT_SETUP.md) - 开发环境搭建
+- [**扩展开发**](EXTENSION_DEVELOPMENT.md) - 插件和扩展开发
 
-### 1. 安装依赖
-```bash
-pip install -r requirements.txt
-```
+### 🚀 部署运维
+- [**部署指南**](DEPLOYMENT_GUIDE.md) - 各种环境的部署方案
+- [**Docker部署**](DOCKER_DEPLOYMENT.md) - 容器化部署详解
+- [**监控告警**](MONITORING_GUIDE.md) - 系统监控配置
+- [**备份恢复**](BACKUP_RECOVERY.md) - 数据备份和恢复策略
 
-### 2. 运行应用
-```bash
-python main.py
-```
+### 📊 日志分析
+- [**日志系统**](LOGGING_GUIDE.md) - 日志配置和管理
+- [**日志分析**](LOG_ANALYSIS.md) - 日志分析工具和技巧
+- [**错误排查**](ERROR_TROUBLESHOOTING.md) - 基于日志的问题排查
 
-### 3. 运行测试
-```bash
-python -m unittest tests/test_services.py
-```
+## 🔍 快速查找
 
-## 配置说明
+### 按使用场景查找
 
-### 环境变量
-- `ROOT_DIR`: 文件管理根目录
-- `SERVER_PORT`: 服务器端口
-- `DEBUG_MODE`: 调试模式开关
-- `ENV`: 运行环境（development/production）
+**我是新用户，想快速体验系统**
+1. [项目概述](../README.md) → [快速启动](STARTUP_GUIDE.md) → [基础操作](USER_INTERFACE.md)
 
-### 配置文件
-主要配置在 `core/config.py` 中，支持环境变量覆盖。
+**我想配置和定制系统**
+1. [配置指南](CONFIG_GUIDE.md) → [安全设置](SECURITY_CONFIG.md) → [性能调优](PERFORMANCE_TUNING.md)
 
-## 安全特性
+**我想使用在线编辑器**
+1. [编辑器指南](EDITOR_README.md) → [支持的文件类型](SUPPORTED_FILE_TYPES.md)
 
-1. **路径遍历防护**: 防止访问根目录外的文件
-2. **文件类型验证**: 支持白名单和黑名单文件类型控制
-3. **文件大小限制**: 可配置的单文件和总上传大小限制
-4. **速率限制**: API访问频率限制
-5. **输入验证**: 文件名和路径的安全验证
+**我想开发和扩展功能**
+1. [开发指南](DEVELOPMENT_GUIDE.md) → [API文档](API_REFERENCE.md) → [代码结构](CODE_STRUCTURE.md)
 
-## 扩展指南
+**我想部署到生产环境**
+1. [部署指南](DEPLOYMENT_GUIDE.md) → [安全加固](SECURITY_HARDENING.md) → [监控配置](MONITORING_GUIDE.md)
 
-### 添加新的API端点
-1. 在 `api/routes/` 下创建新的路由文件
-2. 在 `core/app.py` 中注册新的蓝图
-3. 在相应的服务层添加业务逻辑
+**我遇到了问题**
+1. [故障排除](TROUBLESHOOTING.md) → [常见问题](FAQ.md) → [日志分析](LOG_ANALYSIS.md)
 
-### 添加新的服务
-1. 在 `services/` 下创建新的服务类
-2. 实现相应的业务逻辑
-3. 在API路由中调用服务
+### 按技术栈查找
 
-### 添加新的工具函数
-1. 在 `utils/` 下创建新的工具模块
-2. 实现相应的工具函数
-3. 在服务层或其他地方调用
+| 技术 | 相关文档 |
+|------|----------|
+| **Python/Flask** | [开发指南](DEVELOPMENT_GUIDE.md), [API文档](API_REFERENCE.md) |
+| **JavaScript** | [前端开发](FRONTEND_DEVELOPMENT.md), [编辑器扩展](EDITOR_EXTENSIONS.md) |
+| **Docker** | [Docker部署](DOCKER_DEPLOYMENT.md), [容器配置](CONTAINER_CONFIG.md) |
+| **Nginx** | [反向代理](REVERSE_PROXY.md), [静态文件](STATIC_FILES.md) |
+| **日志系统** | [日志配置](LOGGING_GUIDE.md), [日志分析](LOG_ANALYSIS.md) |
 
-## 测试策略
+## 📝 文档贡献
 
-- **单元测试**: 测试各个服务类的功能
-- **集成测试**: 测试API端点的功能
-- **安全测试**: 测试安全防护功能
+### 改进文档
+如果您发现文档有错误或需要改进：
+1. 提交 [Issue](../../issues) 报告问题
+2. 或者直接提交 [Pull Request](../../pulls) 修改
 
-## 部署说明
+### 新增文档
+参与文档编写：
+1. 查看 [文档规范](DOCUMENTATION_STANDARDS.md)
+2. 使用统一的文档模板
+3. 遵循 Markdown 格式规范
 
-### 开发环境
-```bash
-export ENV=development
-export DEBUG_MODE=true
-python main.py
-```
+### 文档状态
 
-### 生产环境
-```bash
-export ENV=production
-export DEBUG_MODE=false
-python main.py
-```
+| 状态 | 含义 | 图标 |
+|------|------|------|
+| ✅ 完整 | 文档完整，内容详细 | ✅ |
+| 🔄 更新中 | 正在更新或完善 | 🔄 |
+| 📝 计划中 | 计划编写，尚未开始 | 📝 |
+| ❌ 待修复 | 需要修复或重写 | ❌ |
 
-## 版本历史
+## 🆘 获取帮助
 
-- **v2.0.0**: 重构版本，采用模块化架构
-- **v1.x.x**: 原始单体架构版本
+### 在线支持
+- **GitHub Issues**: [报告问题](../../issues)
+- **GitHub Discussions**: [参与讨论](../../discussions)
+- **文档反馈**: [改进建议](../../issues/new?template=documentation.md)
 
-## 贡献指南
+### 社区资源
+- **示例项目**: [文件管理系统示例](../../examples)
+- **视频教程**: [YouTube频道](#)
+- **博客文章**: [技术博客](#)
 
-1. Fork项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建Pull Request
+---
 
-## 许可证
-
-本项目采用MIT许可证。
+<div align="center">
+  <p><strong>📚 持续改进中的文档</strong></p>
+  <p>如有疑问或建议，欢迎通过 Issues 反馈</p>
+  <p><em>最后更新: 2024年</em></p>
+</div>

@@ -5,7 +5,6 @@
 
 import os
 import shutil
-import logging
 from datetime import datetime
 import hashlib
 import mimetypes
@@ -13,8 +12,9 @@ import mimetypes
 from core.config import Config
 from services.security_service import SecurityService
 from utils.file_utils import FileUtils
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class FileService:
     """文件操作服务类"""
@@ -336,8 +336,8 @@ class FileService:
                 'name': os.path.basename(file_path),
                 'type': 'directory' if os.path.isdir(file_path) else 'file',
                 'size': stat.st_size if os.path.isfile(file_path) else 0,
-                'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                'created': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                'modified': int(stat.st_mtime),
+                'created': int(stat.st_ctime),
                 'permissions': oct(stat.st_mode)[-3:],
                 'mime_type': mimetypes.guess_type(file_path)[0] if os.path.isfile(file_path) else None
             }

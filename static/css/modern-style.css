@@ -405,6 +405,32 @@ header::after {
     color: var(--primary-color);
 }
 
+/* 可编辑文件的特殊样式 */
+.file-name.editable {
+    color: var(--primary-color);
+    position: relative;
+}
+
+.file-name.editable::after {
+    content: '✏️';
+    position: absolute;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.file-name.editable:hover::after {
+    opacity: 1;
+}
+
+.file-name.editable:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
 .file-actions {
     display: flex;
     gap: 0.75rem;
@@ -951,4 +977,79 @@ tr:has(.empty-message), tr .empty-message {
 .file-icon.file-type-image { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.2)); }
 .file-icon.file-type-video { background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.2)); }
 .file-icon.file-type-audio { background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.2)); }
+
+/* 搜索高亮样式 */
+.search-highlight {
+    background-color: rgba(255, 255, 0, 0.6) !important;
+    color: black !important;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.current-search-highlight {
+    background-color: rgba(255, 87, 34, 0.8) !important;
+    color: white !important;
+    border-radius: 2px;
+    padding: 1px 2px;
+    box-shadow: 0 0 0 1px rgba(255, 87, 34, 1);
+}
+
+/* CodeMirror 特定的搜索高亮样式 */
+.CodeMirror .search-highlight {
+    background-color: rgba(255, 255, 0, 0.6) !important;
+    color: black !important;
+}
+
+.CodeMirror .current-search-highlight {
+    background-color: rgba(255, 87, 34, 0.8) !important;
+    color: white !important;
+    box-shadow: 0 0 0 1px rgba(255, 87, 34, 1) !important;
+}
 .file-icon.file-type-document { background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.2)); }
+
+/* 跳转行模态框样式改进 */
+#goto-line-modal .modal-body {
+    padding: 2rem;
+}
+
+#goto-line-input {
+    font-size: 1.1rem;
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    width: 100%;
+    transition: all 0.3s ease;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    text-align: center;
+}
+
+#goto-line-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    outline: none;
+}
+
+#goto-line-input::placeholder {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* 跳转行按钮样式 */
+#goto-line-modal .btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), #7c3aed);
+    border: none;
+    padding: 0.875rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#goto-line-modal .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+}
+
+/* 跳转行模态框标题图标 */
+#goto-line-modal .modal-header h3 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}

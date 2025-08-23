@@ -5,11 +5,11 @@
 
 import os
 import sys
-import logging
 
 from core.config import Config
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class SystemService:
     """系统信息服务类"""
