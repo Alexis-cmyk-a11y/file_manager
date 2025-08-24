@@ -13,13 +13,15 @@
 
 - **📁 文件管理**: 智能浏览、多文件上传、安全下载、批量操作、实时预览
 - **✏️ 在线编辑**: CodeMirror编辑器，支持50+种编程语言，语法高亮
+- **🗄️ 数据存储**: MySQL数据库支持，文件信息持久化、操作日志记录、用户会话管理
 - **🔒 安全保护**: 文件验证、速率限制、恶意文件检测、日志审计
-- **⚡ 性能优化**: Redis缓存、本地化资源、连接池管理
+- **⚡ 性能优化**: Redis缓存、MySQL连接池、本地化资源、连接池管理
 
 ## 🚀 快速开始
 
 ### 环境要求
 - **Python**: 3.7+
+- **MySQL**: 5.7+ (推荐8.0+)
 - **Redis**: 推荐安装（可选）
 - **浏览器**: 现代浏览器
 
@@ -32,10 +34,13 @@ cd file_manager
 # 2. 安装依赖
 pip install -r requirements.txt
 
-# 3. 启动Redis（可选）
+# 3. 初始化MySQL数据库
+python scripts/init_database.py
+
+# 4. 启动Redis（可选）
 redis-server
 
-# 4. 启动服务
+# 5. 启动服务
 python main.py
 
 # 5. 访问系统
@@ -69,8 +74,8 @@ export ENABLE_PERFORMANCE_MONITORING=true
 
 ## 📚 相关文档
 
-- [优化总结](docs/OPTIMIZATION_SUMMARY.md) - 项目优化详情
-- [Redis设置](docs/REDIS_SETUP.md) - Redis配置和使用
+- [快速部署](docs/DEPLOYMENT.md) - 快速部署指南
+- [技术指南](docs/TECHNICAL_GUIDE.md) - 完整的技术文档
 
 ## 🔧 主要功能
 

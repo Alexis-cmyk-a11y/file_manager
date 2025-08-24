@@ -47,6 +47,32 @@ def health_check():
                 'error': str(e)
             }
         
+        # 检查MySQL服务
+        try:
+            mysql_service = getattr(current_app, 'mysql_service', None)
+            if mysql_service:
+                mysql_healthy = mysql_service.is_connected()
+                health_status['services']['mysql'] = {
+                    'status': 'healthy' if mysql_healthy else 'unhealthy',
+                    'connected': mysql_healthy,
+                    'host': current_app.config.get('MYSQL_HOST', 'localhost'),
+                    'port': current_app.config.get('MYSQL_PORT', 3306),
+                    'database': current_app.config.get('MYSQL_DATABASE', 'file_manager'),
+                    'connection_pool_size': len(mysql_service.connection_pool) if hasattr(mysql_service, 'connection_pool') else 0
+                }
+            else:
+                health_status['services']['mysql'] = {
+                    'status': 'unavailable',
+                    'connected': False,
+                    'message': 'MySQL服务未初始化'
+                }
+        except Exception as e:
+            health_status['services']['mysql'] = {
+                'status': 'error',
+                'connected': False,
+                'error': str(e)
+            }
+        
         # 检查缓存服务
         try:
             cache_service = get_cache_service()
@@ -105,27 +131,92 @@ def health_check():
             }
         
         # 检查整体健康状态
-        all_services = health_status['services'].values()
-        if any(service.get('status') == 'error' for service in all_services):
-            health_status['status'] = 'degraded'
-        elif any(service.get('status') == 'unhealthy' for service in all_services):
-            health_status['status'] = 'unhealthy'
+        all_healthy = all(
+            service.get('status') in ['healthy', 'unavailable'] 
+            for service in health_status['services'].values()
+        )
+        health_status['status'] = 'healthy' if all_healthy else 'degraded'
         
-        # 设置HTTP状态码
-        status_code = 200
-        if health_status['status'] == 'unhealthy':
-            status_code = 503
-        elif health_status['status'] == 'degraded':
-            status_code = 200  # 降级状态仍然返回200，但状态为degraded
-        
-        return jsonify(health_status), status_code
-        
+        return jsonify(health_status)
+    
     except Exception as e:
-        logger.error(f"健康检查失败: {e}")
+        logger.error(f"健康检查失败: {str(e)}")
         return jsonify({
             'status': 'error',
             'timestamp': datetime.now().isoformat(),
             'error': str(e)
+        }), 500
+
+@bp.route('/logs/retention', methods=['GET'])
+def get_log_retention_info():
+    """获取日志保留信息"""
+    try:
+        mysql_service = getattr(current_app, 'mysql_service', None)
+        if not mysql_service:
+            return jsonify({
+                'success': False,
+                'message': 'MySQL服务不可用'
+            }), 503
+        
+        retention_info = mysql_service.get_log_retention_info()
+        return jsonify(retention_info)
+        
+    except Exception as e:
+        logger.error(f"获取日志保留信息失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/logs/cleanup', methods=['POST'])
+def cleanup_old_logs():
+    """清理过期日志"""
+    try:
+        mysql_service = getattr(current_app, 'mysql_service', None)
+        if not mysql_service:
+            return jsonify({
+                'success': False,
+                'message': 'MySQL服务不可用'
+            }), 503
+        
+        data = request.get_json() or {}
+        retention_days = data.get('retention_days', 30)
+        
+        if not isinstance(retention_days, int) or retention_days < 1:
+            return jsonify({
+                'success': False,
+                'message': 'retention_days必须是大于0的整数'
+            }), 400
+        
+        cleanup_result = mysql_service.cleanup_old_logs(retention_days)
+        return jsonify(cleanup_result)
+        
+    except Exception as e:
+        logger.error(f"清理过期日志失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/logs/optimize', methods=['POST'])
+def optimize_log_table():
+    """优化日志表性能"""
+    try:
+        mysql_service = getattr(current_app, 'mysql_service', None)
+        if not mysql_service:
+            return jsonify({
+                'success': False,
+                'message': 'MySQL服务不可用'
+            }), 503
+        
+        optimize_result = mysql_service.optimize_log_table()
+        return jsonify(optimize_result)
+        
+    except Exception as e:
+        logger.error(f"优化日志表失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
         }), 500
 
 @bp.route('/status', methods=['GET'])

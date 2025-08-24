@@ -4,140 +4,276 @@
 """
 
 import os
-import hashlib
+import time
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 from werkzeug.utils import secure_filename
 
 from core.config import Config
-from services.security_service import SecurityService
+from services.mysql_service import get_mysql_service
 from utils.logger import get_logger
+from utils.file_utils import FileUtils
 
 logger = get_logger(__name__)
 
 class UploadService:
-    """上传服务类"""
+    """文件上传服务类"""
     
     def __init__(self):
         self.config = Config()
-        self.security_service = SecurityService()
+        self.mysql_service = None
+        
+        # 尝试初始化MySQL服务
+        try:
+            self.mysql_service = get_mysql_service()
+            if self.mysql_service and self.mysql_service.is_connected():
+                logger.info("MySQL服务集成成功")
+            else:
+                logger.warning("MySQL服务不可用，将跳过数据库日志记录")
+        except Exception as e:
+            logger.warning(f"MySQL服务初始化失败: {e}")
     
-    def upload_files(self, files, target_dir):
-        """上传多个文件"""
-        # 检查是否启用上传功能
-        if not self.config.ENABLE_UPLOAD:
-            logger.warning("尝试上传文件，但上传功能已禁用")
-            return {'success': False, 'message': '上传功能已禁用'}
-        
-        # 验证目标目录路径安全性
-        is_safe, result = self.security_service.validate_path_safety(target_dir)
-        if not is_safe:
-            logger.warning(f"上传目标路径安全检查失败: {target_dir}")
-            return {'success': False, 'message': result}
-        
-        full_target_dir = result
-        logger.info(f"尝试上传文件到目录: {full_target_dir}")
-        
-        # 检查目标目录是否存在
-        if not os.path.exists(full_target_dir) or not os.path.isdir(full_target_dir):
-            logger.warning(f"上传目标目录不存在: {full_target_dir}")
-            return {'success': False, 'message': '目标目录不存在'}
+    def _log_operation(self, operation_type: str, file_path: str = None, 
+                       file_name: str = None, file_size: int = None, 
+                       user_ip: str = None, user_agent: str = None,
+                       status: str = 'success', error_message: str = None,
+                       duration_ms: int = None):
+        """记录文件操作到MySQL数据库"""
+        if not self.mysql_service or not self.mysql_service.is_connected():
+            return
         
         try:
-            uploaded_count, uploaded_info, errors = self._save_uploaded_files(files, full_target_dir)
-            
-            # 改进错误处理逻辑
-            if uploaded_count == 0 and errors:
-                # 所有文件都上传失败
-                return {
-                    'success': False,
-                    'message': f'所有文件上传失败',
-                    'errors': errors,
-                    'total_uploaded': 0
-                }
-            elif uploaded_count > 0 and errors:
-                # 部分文件上传成功，部分失败
-                return {
-                    'success': True,
-                    'message': f'成功上传 {uploaded_count} 个文件，{len(errors)} 个文件失败',
-                    'files': uploaded_info,
-                    'errors': errors,
-                    'total_uploaded': uploaded_count
-                }
-            else:
-                # 所有文件都上传成功
-                return {
-                    'success': True,
-                    'message': f'成功上传 {uploaded_count} 个文件',
-                    'files': uploaded_info,
-                    'total_uploaded': uploaded_count
-                }
-                
+            self.mysql_service.log_file_operation(
+                operation_type=operation_type,
+                file_path=file_path,
+                file_name=file_name,
+                file_size=file_size,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status=status,
+                error_message=error_message,
+                duration_ms=duration_ms
+            )
         except Exception as e:
-            logger.error(f"文件上传失败: {str(e)}")
-            return {'success': False, 'message': str(e)}
+            logger.error(f"记录操作日志失败: {e}")
     
-    def _save_uploaded_files(self, files, target_directory):
-        """保存上传的文件并返回上传结果"""
-        uploaded_count = 0
-        uploaded_info = []
-        errors = []
+    def _save_file_info_to_db(self, file_path: str, file_info: Dict[str, Any]):
+        """保存文件信息到数据库"""
+        if not self.mysql_service or not self.mysql_service.is_connected():
+            return
         
-        for file in files:
-            logger.info(f"处理文件: {file.filename}")
-            if file.filename == '':
-                logger.warning("跳过空文件名")
-                continue
+        try:
+            self.mysql_service.save_file_info(file_info)
+        except Exception as e:
+            logger.error(f"保存文件信息到数据库失败: {e}")
+    
+    def upload_file(self, file, target_directory: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """上传单个文件"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(target_directory):
+                raise ValueError("目标目录路径不安全")
             
-            # 验证文件扩展名
-            logger.info(f"验证文件扩展名: {file.filename}")
-            is_valid, message = self.security_service.validate_file_extension(file.filename)
-            if not is_valid:
-                logger.warning(f"文件扩展名验证失败: {file.filename} - {message}")
-                errors.append(f"{file.filename}: {message}")
-                continue
+            # 检查目标目录是否存在
+            if not os.path.exists(target_directory):
+                os.makedirs(target_directory, exist_ok=True)
             
-            # 验证文件大小
-            if hasattr(self.config, 'MAX_FILE_SIZE'):
-                # 获取文件大小，兼容不同的Flask版本
-                file_size = getattr(file, 'content_length', None)
-                if file_size is None:
-                    # 如果没有content_length，尝试从文件流获取
-                    try:
-                        file.seek(0, 2)  # 移动到文件末尾
-                        file_size = file.tell()
-                        file.seek(0)  # 重置到文件开头
-                    except:
-                        file_size = 0
-                
-                if file_size and file_size > self.config.MAX_FILE_SIZE:
-                    errors.append(f"{file.filename}: 文件大小超过限制 ({file_size} > {self.config.MAX_FILE_SIZE})")
-                    continue
-            
+            # 获取安全的文件名
             filename = secure_filename(file.filename)
-            file_path = os.path.join(target_directory, filename)
+            if not filename:
+                raise ValueError("无效的文件名")
             
-            # 检查文件是否已存在，如果存在则重命名
-            counter = 1
-            original_filename = filename
-            while os.path.exists(file_path):
-                name, ext = os.path.splitext(original_filename)
-                filename = f"{name}_{counter}{ext}"
-                file_path = os.path.join(target_directory, filename)
-                counter += 1
+            # 构建目标文件路径
+            target_path = os.path.join(target_directory, filename)
             
-            try:
-                file.save(file_path)
-                file_size = os.path.getsize(file_path)
-                logger.info(f"文件上传成功: {filename}, 大小: {file_size} 字节")
-                
-                uploaded_count += 1
-                uploaded_info.append({
-                    'name': filename,
-                    'path': os.path.relpath(file_path, start=self.config.ROOT_DIR).replace('\\', '/'),
-                    'size': file_size,
-                    'md5': hashlib.md5(open(file_path, 'rb').read()).hexdigest()
-                })
-            except Exception as e:
-                errors.append(f"{file.filename}: 保存失败 - {str(e)}")
-                logger.error(f"文件保存失败: {file.filename}, 错误: {str(e)}")
+            # 检查文件是否已存在
+            if os.path.exists(target_path):
+                raise FileExistsError("文件已存在")
+            
+            # 保存文件
+            file.save(target_path)
+            
+            # 获取文件信息
+            file_info = FileUtils.get_file_info(target_path)
+            
+            # 保存文件信息到数据库
+            self._save_file_info_to_db(target_path, file_info)
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='upload',
+                file_path=target_path,
+                file_name=file_info['name'],
+                file_size=file_info['size'],
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': '文件上传成功',
+                'file_info': file_info,
+                'target_path': target_path
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='upload',
+                file_path=target_directory,
+                file_name=file.filename if file else None,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def upload_multiple_files(self, files: List, target_directory: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """上传多个文件"""
+        start_time = time.time()
         
-        return uploaded_count, uploaded_info, errors
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(target_directory):
+                raise ValueError("目标目录路径不安全")
+            
+            # 检查目标目录是否存在
+            if not os.path.exists(target_directory):
+                os.makedirs(target_directory, exist_ok=True)
+            
+            uploaded_files = []
+            failed_files = []
+            
+            for file in files:
+                try:
+                    # 获取安全的文件名
+                    filename = secure_filename(file.filename)
+                    if not filename:
+                        failed_files.append({
+                            'filename': file.filename,
+                            'error': '无效的文件名'
+                        })
+                        continue
+                    
+                    # 构建目标文件路径
+                    target_path = os.path.join(target_directory, filename)
+                    
+                    # 检查文件是否已存在
+                    if os.path.exists(target_path):
+                        failed_files.append({
+                            'filename': filename,
+                            'error': '文件已存在'
+                        })
+                        continue
+                    
+                    # 保存文件
+                    file.save(target_path)
+                    
+                    # 获取文件信息
+                    file_info = FileUtils.get_file_info(target_path)
+                    
+                    # 保存文件信息到数据库
+                    self._save_file_info_to_db(target_path, file_info)
+                    
+                    uploaded_files.append({
+                        'filename': filename,
+                        'file_info': file_info,
+                        'target_path': target_path
+                    })
+                    
+                except Exception as e:
+                    failed_files.append({
+                        'filename': file.filename,
+                        'error': str(e)
+                    })
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='upload',
+                file_path=target_directory,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success' if uploaded_files else 'failed',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': f'批量上传完成，成功: {len(uploaded_files)}, 失败: {len(failed_files)}',
+                'uploaded_files': uploaded_files,
+                'failed_files': failed_files,
+                'total_files': len(files),
+                'success_count': len(uploaded_files),
+                'failed_count': len(failed_files)
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='upload',
+                file_path=target_directory,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def validate_upload(self, file, max_size: int = None) -> Dict[str, Any]:
+        """验证上传文件"""
+        try:
+            # 检查文件大小
+            if max_size and file.content_length > max_size:
+                return {
+                    'valid': False,
+                    'error': f'文件大小超过限制: {file.content_length} > {max_size}'
+                }
+            
+            # 检查文件扩展名
+            filename = file.filename.lower()
+            forbidden_extensions = self.config.FORBIDDEN_EXTENSIONS
+            
+            for ext in forbidden_extensions:
+                if filename.endswith(ext.lower()):
+                    return {
+                        'valid': False,
+                        'error': f'不允许上传的文件类型: {ext}'
+                    }
+            
+            return {
+                'valid': True,
+                'message': '文件验证通过'
+            }
+            
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'文件验证失败: {str(e)}'
+            }
+    
+    def get_upload_stats(self, days: int = 7) -> Dict[str, Any]:
+        """获取上传统计信息"""
+        if not self.mysql_service or not self.mysql_service.is_connected():
+            return {
+                'success': False,
+                'message': 'MySQL服务不可用'
+            }
+        
+        try:
+            stats = self.mysql_service.get_operation_stats(days)
+            return stats
+        except Exception as e:
+            logger.error(f"获取上传统计失败: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }

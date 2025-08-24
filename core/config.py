@@ -123,6 +123,43 @@ class Config:
             'health_check_interval': int(os.getenv('REDIS_HEALTH_CHECK_INTERVAL', 30))
         }
         
+        # MySQL配置
+        self.MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
+        self.MYSQL_PORT = int(os.getenv('MYSQL_PORT', 3306))
+        self.MYSQL_DATABASE = os.getenv('MYSQL_DATABASE', 'file_manager')
+        self.MYSQL_USERNAME = os.getenv('MYSQL_USERNAME', 'root')
+        self.MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', 'z6tsJw9NqvsDy6vZ')
+        self.MYSQL_CHARSET = os.getenv('MYSQL_CHARSET', 'utf8mb4')
+        
+        # MySQL连接池配置
+        self.MYSQL_POOL_CONFIG = {
+            'max_connections': int(os.getenv('MYSQL_MAX_CONNECTIONS', 20)),
+            'min_connections': int(os.getenv('MYSQL_MIN_CONNECTIONS', 5)),
+            'pool_recycle': int(os.getenv('MYSQL_POOL_RECYCLE', 3600)),
+            'pool_pre_ping': os.getenv('MYSQL_POOL_PRE_PING', 'true').lower() == 'true',
+            'echo': os.getenv('MYSQL_ECHO', 'false').lower() == 'true'
+        }
+        
+        # MySQL选项配置
+        self.MYSQL_OPTIONS = {
+            'autocommit': os.getenv('MYSQL_AUTOCOMMIT', 'true').lower() == 'true',
+            'isolation_level': os.getenv('MYSQL_ISOLATION_LEVEL', 'READ_COMMITTED'),
+            'connect_timeout': int(os.getenv('MYSQL_CONNECT_TIMEOUT', 10)),
+            'read_timeout': int(os.getenv('MYSQL_READ_TIMEOUT', 30)),
+            'write_timeout': int(os.getenv('MYSQL_WRITE_TIMEOUT', 30))
+        }
+        
+        # MySQL日志保留策略配置
+        self.MYSQL_LOG_RETENTION = {
+            'enabled': os.getenv('MYSQL_LOG_RETENTION_ENABLED', 'true').lower() == 'true',
+            'retention_days': int(os.getenv('MYSQL_LOG_RETENTION_DAYS', 30)),
+            'auto_cleanup': os.getenv('MYSQL_LOG_AUTO_CLEANUP', 'true').lower() == 'true',
+            'cleanup_schedule': os.getenv('MYSQL_LOG_CLEANUP_SCHEDULE', '0 2 * * *'),
+            'optimize_schedule': os.getenv('MYSQL_LOG_OPTIMIZE_SCHEDULE', '0 3 * * 0'),
+            'max_records': int(os.getenv('MYSQL_LOG_MAX_RECORDS', 100000)),
+            'cleanup_batch_size': int(os.getenv('MYSQL_LOG_CLEANUP_BATCH_SIZE', 1000))
+        }
+        
         # 缓存配置
         self.CACHE_ENABLED = os.getenv('CACHE_ENABLED', 'true').lower() == 'true'
         self.CACHE_DEFAULT_TTL = int(os.getenv('CACHE_DEFAULT_TTL', 300))  # 5分钟
@@ -205,6 +242,10 @@ class Config:
                     self.REDIS_POOL_CONFIG.update(value)
                 else:
                     setattr(self, key, value)
+            
+            # 特殊处理安全配置
+            if key == 'security' and isinstance(value, dict):
+                self.SECURITY = value
     
     def _validate_config(self):
         """验证配置的有效性"""

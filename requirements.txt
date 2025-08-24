@@ -7,6 +7,10 @@ flask-limiter==3.5.0
 # Cache and database
 redis==5.0.1
 psutil==5.9.6
+pymysql==1.1.0
+sqlalchemy==2.0.23
+flask-sqlalchemy==3.1.1
+cryptography==41.0.7
 
 # Configuration and serialization
 pyyaml==6.0.1
@@ -19,4 +23,4 @@ memory-profiler==0.61.0
 
 # Development tools (optional)
 # python-dotenv==1.0.0  # Environment variable management
-# watchdog==3.0.0       # File system monitoring
+# watchdog==0.0       # File system monitoring

@@ -569,7 +569,13 @@ async function loadFileList() {
         
         if (response.ok) {
             console.log("加载成功，渲染文件列表");
-            renderFileList(data.items);
+            // 转换数据格式，将API返回的数据转换为前端期望的格式
+            const convertedItems = data.items.map(item => ({
+                ...item,
+                type: item.is_directory ? 'directory' : 'file',
+                modified: item.modified_time
+            }));
+            renderFileList(convertedItems);
         } else {
             console.error("加载失败：", data.message);
             showNotification(data.message, 'error');
@@ -747,9 +753,15 @@ function addFileListEventListeners() {
             console.log("文件名点击事件触发:", { path, type, fileName });
             
             if (type === 'directory') {
-                // 打开文件夹
+                // 打开文件夹 - 使用相对路径
                 console.log("打开文件夹:", path);
-                currentPath = path;
+                // 将目录名添加到当前路径
+                if (currentPath === '' || currentPath === '.') {
+                    currentPath = fileName;
+                } else {
+                    currentPath = currentPath + '/' + fileName;
+                }
+                console.log("新的当前路径:", currentPath);
                 loadFileList();
                 updateBreadcrumb();
             } else {
@@ -941,7 +953,7 @@ async function uploadFiles() {
             formData.append('files', fileUploadInput.files[i]);
         }
         
-        const response = await fetch('/api/upload', {
+        const response = await fetch('/api/upload_multiple', {
             method: 'POST',
             body: formData
         });
@@ -952,19 +964,19 @@ async function uploadFiles() {
             // 检查是否有部分文件上传失败
             if (data.errors && data.errors.length > 0) {
                 // 有错误，显示详细的错误信息
-                if (data.total_uploaded > 0) {
-                    showNotification(`成功上传 ${data.total_uploaded} 个文件，但有 ${data.errors.length} 个文件失败`, 'warning');
+                if (data.success_count > 0) {
+                    showNotification(`成功上传 ${data.success_count} 个文件，但有 ${data.failed_count} 个文件失败`, 'warning');
                     // 显示详细错误信息
-                    showDetailedErrors(data.errors, '部分文件上传失败');
+                    showDetailedErrors(data.failed_files.map(f => f.error), '部分文件上传失败');
                 } else {
                     showNotification('所有文件上传失败', 'error');
                     // 显示详细错误信息
-                    showDetailedErrors(data.errors, '文件上传失败详情');
+                    showDetailedErrors(data.failed_files.map(f => f.error), '文件上传失败详情');
                     return; // 不刷新文件列表
                 }
             } else {
                 // 所有文件都上传成功
-                showNotification(`成功上传 ${data.total_uploaded || data.files?.length || 0} 个文件`, 'success');
+                showNotification(`成功上传 ${data.success_count || 0} 个文件`, 'success');
             }
             
             console.log("上传完成，准备刷新文件列表...");
@@ -1036,8 +1048,21 @@ function showDetailedErrors(errors, title) {
 
 // 下载文件
 function downloadFile(path) {
-    console.log("下载文件:", path);
-    window.location.href = `/api/download?path=${encodeURIComponent(path)}`;
+    console.log("下载文件 - 绝对路径:", path);
+    
+    // 构建相对路径
+    let relativePath = '';
+    if (currentPath === '' || currentPath === '.') {
+        // 从绝对路径中提取文件名
+        relativePath = path.split('\\').pop();
+    } else {
+        // 从绝对路径中提取文件名，然后添加到当前路径
+        const fileName = path.split('\\').pop();
+        relativePath = currentPath + '/' + fileName;
+    }
+    
+    console.log("下载文件 - 相对路径:", relativePath);
+    window.location.href = `/api/download?path=${encodeURIComponent(relativePath)}`;
 }
 
 // 显示新建文件夹模态框
@@ -1133,13 +1158,24 @@ async function confirmRename() {
         showLoading(true);
         hideRenameModal();
         
+        // 构建相对路径 - 从绝对路径中提取文件名
+        const fileName = path.split('\\').pop(); // 获取文件名部分
+        let relativePath = '';
+        if (currentPath === '' || currentPath === '.') {
+            relativePath = fileName;
+        } else {
+            relativePath = currentPath + '/' + fileName;
+        }
+        
+        console.log("重命名路径 - 绝对路径:", path, "文件名:", fileName, "相对路径:", relativePath);
+        
         const response = await fetch('/api/rename', {
-            method: 'POST',
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                path: path,
+                old_path: relativePath,
                 new_name: newName
             })
         });
@@ -1201,8 +1237,9 @@ async function loadFolderTree() {
             throw new Error(data.message || '加载文件夹失败');
         }
         
-        // 过滤出文件夹
-        const folders = data.items.filter(item => item.type === 'directory');
+        // 过滤出文件夹 - 使用正确的字段名
+        const folders = data.items.filter(item => item.is_directory === true);
+        console.log("文件夹树 - 总项目数:", data.items.length, "文件夹数:", folders.length);
         
         // 渲染文件夹树
         folderTree.innerHTML = '';
@@ -1231,8 +1268,10 @@ async function loadFolderTree() {
         for (const folder of folders) {
             const folderItem = document.createElement('li');
             folderItem.className = 'folder-item';
+            
+            // 不预先检查子目录，只在用户展开时才检查
             folderItem.innerHTML = `
-                <div class="folder-name" data-path="${folder.path}">
+                <div class="folder-name" data-path="${folder.name}">
                     <i class="fas fa-folder"></i> ${folder.name}
                     <i class="fas fa-chevron-right toggle-icon"></i>
                 </div>
@@ -1248,32 +1287,45 @@ async function loadFolderTree() {
                 this.classList.add('selected');
             });
             
-            // 添加展开/收缩事件
+            // 添加展开/收缩事件（只在有展开图标时）
             const toggleIcon = folderItem.querySelector('.toggle-icon');
             const subList = folderItem.querySelector('.subfolder-list');
-            toggleIcon.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                
-                if (subList.style.display === 'none') {
-                    // 展开子目录
-                    toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-down');
-                    subList.style.display = 'block';
+            
+            if (toggleIcon) {
+                toggleIcon.addEventListener('click', async function(e) {
+                    e.stopPropagation();
                     
-                    // 如果子目录为空，则加载
-                    if (subList.children.length === 0) {
-                        await loadSubFolders(folder.path, subList);
+                    if (subList.style.display === 'none') {
+                        // 展开子目录
+                        toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+                        subList.style.display = 'block';
+                        
+                        // 如果子目录为空，则加载
+                        if (subList.children.length === 0) {
+                            // 文件夹树始终从根目录开始，所以路径就是文件夹名
+                            const relativePath = folder.name;
+                            const hasSubFolders = await loadSubFolders(relativePath, subList);
+                            
+                            // 如果没有子目录，隐藏展开图标
+                            if (!hasSubFolders) {
+                                toggleIcon.style.display = 'none';
+                            }
+                        }
+                    } else {
+                        // 收缩子目录
+                        toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+                        subList.style.display = 'none';
                     }
-                } else {
-                    // 收缩子目录
-                    toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-right');
-                    subList.style.display = 'none';
-                }
-            });
+                });
+            }
             
             subfolderList.appendChild(folderItem);
         }
     } catch (error) {
         folderTree.innerHTML = `<div class="error-message">加载文件夹树时发生错误: ${error.message}</div>`;
+        
+        // 记录详细错误信息到控制台
+        console.error('加载文件夹树失败:', error);
     }
 }
 
@@ -1292,8 +1344,8 @@ async function loadSubFolders(parentPath, container) {
             throw new Error(data.message || '加载子文件夹失败');
         }
         
-        // 过滤出文件夹
-        const folders = data.items.filter(item => item.type === 'directory');
+        // 过滤出文件夹 - 使用正确的字段名
+        const folders = data.items.filter(item => item.is_directory === true);
         
         // 移除加载提示
         container.removeChild(loadingItem);
@@ -1302,8 +1354,12 @@ async function loadSubFolders(parentPath, container) {
         for (const folder of folders) {
             const folderItem = document.createElement('li');
             folderItem.className = 'folder-item';
+            // 构建相对路径 - 文件夹树始终从根目录开始
+            const relativePath = parentPath === '' ? folder.name : parentPath + '/' + folder.name;
+            
+            // 不预先检查子目录，只在用户展开时才检查
             folderItem.innerHTML = `
-                <div class="folder-name" data-path="${folder.path}">
+                <div class="folder-name" data-path="${relativePath}">
                     <i class="fas fa-folder"></i> ${folder.name}
                     <i class="fas fa-chevron-right toggle-icon"></i>
                 </div>
@@ -1319,35 +1375,76 @@ async function loadSubFolders(parentPath, container) {
                 this.classList.add('selected');
             });
             
-            // 添加展开/收缩事件
+            // 添加展开/收缩事件（只在有展开图标时）
             const toggleIcon = folderItem.querySelector('.toggle-icon');
             const subList = folderItem.querySelector('.subfolder-list');
-            toggleIcon.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                
-                if (subList.style.display === 'none') {
-                    // 展开子目录
-                    toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-down');
-                    subList.style.display = 'block';
+            
+            if (toggleIcon) {
+                toggleIcon.addEventListener('click', async function(e) {
+                    e.stopPropagation();
                     
-                    // 如果子目录为空，则加载
-                    if (subList.children.length === 0) {
-                        await loadSubFolders(folder.path, subList);
+                    if (subList.style.display === 'none') {
+                        // 展开子目录
+                        toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+                        subList.style.display = 'block';
+                        
+                        // 如果子目录为空，则加载
+                        if (subList.children.length === 0) {
+                            // 构建相对路径 - 在子文件夹中需要累积路径
+                            const relativePath = parentPath === '' ? folder.name : parentPath + '/' + folder.name;
+                            const hasSubFolders = await loadSubFolders(relativePath, subList);
+                            
+                            // 如果没有子目录，隐藏展开图标
+                            if (!hasSubFolders) {
+                                toggleIcon.style.display = 'none';
+                            }
+                        }
+                    } else {
+                        // 收缩子目录
+                        toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+                        subList.style.display = 'none';
                     }
-                } else {
-                    // 收缩子目录
-                    toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-right');
-                    subList.style.display = 'none';
-                }
-            });
+                });
+            }
             
             container.appendChild(folderItem);
         }
+        
+        // 返回是否有子目录
+        return folders.length > 0;
     } catch (error) {
         const errorItem = document.createElement('li');
         errorItem.className = 'error-item';
         errorItem.textContent = `加载失败: ${error.message}`;
         container.appendChild(errorItem);
+        
+        // 记录详细错误信息到控制台
+        console.error(`加载子文件夹失败 - 父路径: ${parentPath}, 错误:`, error);
+        
+        // 出错时返回false
+        return false;
+    }
+}
+
+// 检查文件夹是否有子目录
+async function checkFolderHasSubFolders(folderPath) {
+    try {
+        console.log(`检查文件夹 ${folderPath} 是否有子目录...`);
+        const response = await fetch(`/api/list?path=${encodeURIComponent(folderPath)}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log(`文件夹 ${folderPath} API返回数据:`, data);
+            // 检查是否有子目录
+            const hasSubFolders = data.items.some(item => item.is_directory === true);
+            console.log(`文件夹 ${folderPath} 子目录检查结果: ${hasSubFolders}, 总项目数: ${data.items.length}`);
+            return hasSubFolders;
+        }
+        console.log(`文件夹 ${folderPath} API返回错误:`, data);
+        return false;
+    } catch (error) {
+        console.warn(`检查文件夹 ${folderPath} 是否有子目录时出错:`, error);
+        return false;
     }
 }
 
@@ -1378,14 +1475,27 @@ async function confirmMoveCopy() {
         
         const endpoint = operationType === 'move' ? '/api/move' : '/api/copy';
         
+        // 构建相对路径
+        let sourceRelativePath = '';
+        if (currentPath === '' || currentPath === '.') {
+            sourceRelativePath = selectedItem.name;
+        } else {
+            sourceRelativePath = currentPath + '/' + selectedItem.name;
+        }
+        
+        // 构建完整的目标路径（目标目录 + 源文件名）
+        const targetFullPath = targetPath === '' ? selectedItem.name : targetPath + '/' + selectedItem.name;
+        
+        console.log("移动/复制路径 - 源绝对路径:", selectedItem.path, "源相对路径:", sourceRelativePath, "目标目录:", targetPath, "完整目标路径:", targetFullPath);
+        
         const response = await fetch(endpoint, {
-            method: 'POST',
+            method: operationType === 'move' ? 'PUT' : 'POST',  // 移动用PUT，复制用POST
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                source: selectedItem.path,
-                target: targetPath
+                source_path: sourceRelativePath,
+                target_path: targetFullPath
             })
         });
         
@@ -1424,13 +1534,23 @@ async function confirmDelete(path, name, type) {
     try {
         showLoading(true);
         
+        // 构建相对路径
+        let relativePath = '';
+        if (currentPath === '' || currentPath === '.') {
+            relativePath = name;
+        } else {
+            relativePath = currentPath + '/' + name;
+        }
+        
+        console.log("删除路径 - 绝对路径:", path, "相对路径:", relativePath);
+        
         const response = await fetch('/api/delete', {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                path: path
+                path: relativePath
             })
         });
         

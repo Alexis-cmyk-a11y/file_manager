@@ -23,7 +23,7 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     
     # 配置应用
-    app.config.from_object(config_class)
+    app.config.from_object(config_class())
     
     # 处理打包后的资源路径
     def resource_path(relative_path):
@@ -71,6 +71,38 @@ def create_app(config_class=Config):
     except Exception as e:
         app.logger.error(f"Redis服务初始化错误: {e}")
         app.redis_service = None
+    
+    # 初始化MySQL服务
+    try:
+        from services.mysql_service import get_mysql_service, close_mysql_service
+        mysql_service = get_mysql_service()
+        if mysql_service.is_connected():
+            app.logger.info("MySQL服务初始化成功")
+            app.mysql_service = mysql_service
+            
+            # 创建必要的数据库表
+            try:
+                mysql_service.create_tables()
+                app.logger.info("MySQL数据库表创建完成")
+                
+                # 启动日志维护服务
+                try:
+                    from services.log_maintenance_service import start_log_maintenance
+                    if start_log_maintenance():
+                        app.logger.info("日志维护服务启动成功")
+                    else:
+                        app.logger.warning("日志维护服务启动失败")
+                except Exception as maintenance_error:
+                    app.logger.warning(f"日志维护服务启动失败: {maintenance_error}")
+                    
+            except Exception as table_error:
+                app.logger.warning(f"MySQL数据库表创建失败: {table_error}")
+        else:
+            app.logger.warning("MySQL服务初始化失败，数据库功能将不可用")
+            app.mysql_service = None
+    except Exception as e:
+        app.logger.error(f"MySQL服务初始化错误: {e}")
+        app.mysql_service = None
     
     # 注册蓝图
     register_blueprints(app)
@@ -129,6 +161,11 @@ def register_page_routes(app):
             return content, 200, {'Content-Type': 'text/markdown; charset=utf-8'}
         except FileNotFoundError:
             return 'Contributing file not found', 404
+    
+    @app.route('/debug')
+    def debug_page():
+        """调试页面"""
+        return render_template('debug_page.html')
 
 def register_error_handlers(app):
     """注册错误处理器"""

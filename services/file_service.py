@@ -5,456 +5,621 @@
 
 import os
 import shutil
+import time
 from datetime import datetime
-import hashlib
-import mimetypes
+from typing import Dict, List, Any, Optional, Tuple
+from pathlib import Path
 
 from core.config import Config
-from services.security_service import SecurityService
 from services.cache_service import get_cache_service
-from utils.file_utils import FileUtils
+from services.mysql_service import get_mysql_service
 from utils.logger import get_logger
+from utils.file_utils import (
+    FileUtils
+)
 
 logger = get_logger(__name__)
 
 class FileService:
-    """文件操作服务类"""
+    """文件服务类"""
     
     def __init__(self):
         self.config = Config()
-        self.security_service = SecurityService()
-        self.file_utils = FileUtils()
         self.cache_service = get_cache_service()
-    
-    def list_directory(self, rel_path):
-        """列出指定目录下的所有文件和子目录"""
-        # 验证路径安全性
-        is_safe, result = self.security_service.validate_path_safety(rel_path)
-        if not is_safe:
-            logger.warning(f"路径安全检查失败: {rel_path}")
-            return {'success': False, 'message': result}
+        self.mysql_service = None
         
-        full_path = result
-        logger.info(f"列出目录内容: {full_path}")
-        
-        # 检查路径是否存在
-        if not os.path.exists(full_path):
-            logger.warning(f"请求的路径不存在: {full_path}")
-            return {'success': False, 'message': '路径不存在'}
-        
-        if not os.path.isdir(full_path):
-            logger.warning(f"请求的路径不是目录: {full_path}")
-            return {'success': False, 'message': '请求的路径不是目录'}
-
+        # 尝试初始化MySQL服务
         try:
-            # 1. 先检查缓存 - 使用相对路径作为缓存键
-            cache_key = f"dir_listing:{rel_path}"
-            cached_result = self.cache_service.get(cache_key)
-            if cached_result:
-                logger.info(f"从缓存获取目录列表: {rel_path}")
-                return cached_result
-            
-            # 2. 如果缓存不存在，从文件系统读取
-            items = self._get_directory_items(full_path, rel_path)
-            
-            # 计算目录统计信息
-            total_files = len([item for item in items if item['type'] == 'file'])
-            total_dirs = len([item for item in items if item['type'] == 'directory'])
-            total_size = sum(item['size'] for item in items if item['type'] == 'file')
-            
-            result = {
-                'success': True,
-                'path': rel_path,
-                'items': items,
-                'current_dir': full_path,
-                'stats': {
-                    'total_items': len(items),
-                    'total_files': total_files,
-                    'total_directories': total_dirs,
-                    'total_size': total_size
-                }
+            self.mysql_service = get_mysql_service()
+            if self.mysql_service and self.mysql_service.is_connected():
+                logger.info("MySQL服务集成成功")
+            else:
+                logger.warning("MySQL服务不可用，将跳过数据库日志记录")
+        except Exception as e:
+            logger.warning(f"MySQL服务初始化失败: {e}")
+    
+    def _log_operation(self, operation_type: str, file_path: str = None, 
+                       file_name: str = None, file_size: int = None, 
+                       user_ip: str = None, user_agent: str = None,
+                       status: str = 'success', error_message: str = None,
+                       duration_ms: int = None):
+        """记录文件操作到MySQL数据库"""
+        if not self.mysql_service or not self.mysql_service.is_connected():
+            return
+        
+        try:
+            self.mysql_service.log_file_operation(
+                operation_type=operation_type,
+                file_path=file_path,
+                file_name=file_name,
+                file_size=file_size,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status=status,
+                error_message=error_message,
+                duration_ms=duration_ms
+            )
+        except Exception as e:
+            logger.error(f"记录操作日志失败: {e}")
+    
+    def _save_file_info_to_db(self, file_path: str, file_info: Dict[str, Any]):
+        """保存文件信息到数据库"""
+        if not self.mysql_service or not self.mysql_service.is_connected():
+            return
+        
+        try:
+            # 转换字段名以匹配数据库期望的格式
+            db_file_info = {
+                'file_path': file_info.get('path'),  # 从 'path' 转换为 'file_path'
+                'file_name': file_info.get('name'),  # 从 'name' 转换为 'file_name'
+                'file_size': file_info.get('size', 0),
+                'file_type': file_info.get('file_type'),
+                'mime_type': file_info.get('mime_type'),
+                'hash_value': file_info.get('hash_value'),
+                'is_directory': file_info.get('is_directory', False),
+                'parent_path': os.path.dirname(file_info.get('path', '')),
+                'permissions': file_info.get('permissions'),
+                'owner': 'system',  # 默认所有者
+                'group_name': 'system'  # 默认组
             }
             
-            # 3. 缓存结果（30秒过期，便于测试）
-            self.cache_service.set(cache_key, result, ttl=30)
-            logger.debug(f"目录 {full_path} 中找到 {len(items)} 个项目，已缓存")
+            # 验证必要字段
+            if not db_file_info['file_path']:
+                raise ValueError(f"文件路径不能为空: {file_info}")
+            
+            self.mysql_service.save_file_info(db_file_info)
+        except Exception as e:
+            logger.error(f"保存文件信息到数据库失败: {e}")
+            # 重新抛出异常以便调试
+            raise
+    
+    def _delete_file_info_from_db(self, file_path: str):
+        """从数据库删除文件信息"""
+        if not self.mysql_service or not self.mysql_service.is_connected():
+            return
+        
+        try:
+            self.mysql_service.delete_file_info(file_path)
+        except Exception as e:
+            logger.error(f"从数据库删除文件信息失败: {e}")
+            # 重新抛出异常以便调试
+            raise
+    
+    def list_directory(self, directory_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """列出目录内容"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(directory_path):
+                raise ValueError("不安全的路径")
+            
+            # 处理空路径或"."，转换为当前工作目录
+            if directory_path == "" or directory_path == ".":
+                directory_path = "."
+                actual_path = os.getcwd()
+            else:
+                actual_path = directory_path
+            
+            # 获取目录内容
+            items = []
+            total_size = 0
+            file_count = 0
+            dir_count = 0
+            
+            try:
+                for item in os.listdir(actual_path):
+                    item_path = os.path.join(actual_path, item)
+                    item_info = FileUtils.get_file_info(item_path)
+                    
+                    if item_info:
+                        items.append(item_info)
+                        if item_info['is_directory']:
+                            dir_count += 1
+                        else:
+                            file_count += 1
+                            total_size += item_info['size']
+            except PermissionError:
+                raise PermissionError("没有权限访问该目录")
+            
+            # 按类型和名称排序
+            items.sort(key=lambda x: (not x['is_directory'], x['name'].lower()))
+            
+            result = {
+                'path': directory_path,
+                'items': items,
+                'total_items': len(items),
+                'file_count': file_count,
+                'dir_count': dir_count,
+                'total_size': total_size,
+                'formatted_size': FileUtils.format_file_size(total_size)
+            }
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='list_directory',
+                file_path=directory_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
             
             return result
             
         except Exception as e:
-            logger.error(f"列出目录内容失败: {full_path}, 错误: {str(e)}")
-            return {'success': False, 'message': str(e)}
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='list_directory',
+                file_path=directory_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
     
-    def copy_item(self, source_path, target_dir):
-        """复制文件或目录"""
-        # 验证源路径安全性
-        is_safe_source, source_result = self.security_service.validate_path_safety(source_path)
-        if not is_safe_source:
-            return {'success': False, 'message': source_result}
-        
-        # 验证目标路径安全性
-        is_safe_target, target_result = self.security_service.validate_path_safety(target_dir)
-        if not is_safe_target:
-            return {'success': False, 'message': target_result}
-        
-        full_source_path = source_result
-        full_target_dir = target_result
-        
-        logger.info(f"尝试复制: {full_source_path} 到 {full_target_dir}")
-        
-        # 检查源路径是否存在
-        if not os.path.exists(full_source_path):
-            logger.warning(f"源文件或目录不存在: {full_source_path}")
-            return {'success': False, 'message': '源文件或目录不存在'}
-        
-        # 检查目标目录是否存在
-        if not os.path.exists(full_target_dir) or not os.path.isdir(full_target_dir):
-            logger.warning(f"目标目录不存在: {full_target_dir}")
-            return {'success': False, 'message': '目标目录不存在'}
-        
-        try:
-            # 获取源文件/目录名
-            source_name = os.path.basename(full_source_path)
-            target_path = os.path.join(full_target_dir, source_name)
-            
-            # 检查目标路径是否已存在
-            if os.path.exists(target_path):
-                logger.warning(f"目标路径已存在同名文件或目录: {target_path}")
-                return {'success': False, 'message': f'目标路径已存在同名文件或目录: {source_name}'}
-            
-            # 复制文件或目录
-            is_file = os.path.isfile(full_source_path)
-            if is_file:
-                shutil.copy2(full_source_path, target_path)
-                logger.info(f"文件复制成功: {full_source_path} -> {target_path}")
-            else:
-                shutil.copytree(full_source_path, target_path)
-                logger.info(f"目录复制成功: {full_source_path} -> {target_path}")
-            
-            # 清除相关缓存
-            self._invalidate_related_caches(target_path, 'create')
-            self._invalidate_directory_cache(target_dir)
-            
-            # 同时清除源目录的缓存，因为复制操作可能影响源目录的显示
-            source_dir = os.path.dirname(full_source_path)
-            if source_dir != full_target_dir:  # 避免重复清除
-                self._invalidate_directory_cache(source_dir)
-            
-            return {
-                'success': True,
-                'message': f'{"文件" if is_file else "目录"} {source_name} 复制成功'
-            }
-        except Exception as e:
-            logger.error(f"复制失败: {str(e)}")
-            return {'success': False, 'message': str(e)}
-    
-    def move_item(self, source_path, target_dir):
-        """移动文件或目录"""
-        # 验证路径安全性
-        is_safe_source, source_result = self.security_service.validate_path_safety(source_path)
-        if not is_safe_source:
-            return {'success': False, 'message': source_result}
-        
-        is_safe_target, target_result = self.security_service.validate_path_safety(target_dir)
-        if not is_safe_target:
-            return {'success': False, 'message': target_result}
-        
-        full_source_path = source_result
-        full_target_dir = target_result
-        
-        logger.info(f"尝试移动: {full_source_path} 到 {full_target_dir}")
-        
-        # 检查源路径和目标目录是否存在
-        if not os.path.exists(full_source_path):
-            logger.warning(f"源文件或目录不存在: {full_source_path}")
-            return {'success': False, 'message': '源文件或目录不存在'}
-        
-        if not os.path.exists(full_target_dir) or not os.path.isdir(full_target_dir):
-            logger.warning(f"目标目录不存在: {full_target_dir}")
-            return {'success': False, 'message': '目标目录不存在'}
-        
-        try:
-            # 获取源文件/目录名
-            source_name = os.path.basename(full_source_path)
-            target_path = os.path.join(full_target_dir, source_name)
-            
-            # 检查目标路径是否已存在
-            if os.path.exists(target_path):
-                logger.warning(f"目标路径已存在同名文件或目录: {target_path}")
-                return {'success': False, 'message': f'目标路径已存在同名文件或目录: {source_name}'}
-            
-            # 移动文件或目录
-            is_file = os.path.isfile(full_source_path)
-            shutil.move(full_source_path, target_path)
-            logger.info(f"{'文件' if is_file else '目录'}移动成功: {full_source_path} -> {target_path}")
-            
-            # 清除相关缓存
-            self._invalidate_related_caches(full_source_path, 'move')
-            self._invalidate_related_caches(target_path, 'move')
-            self._invalidate_directory_cache(target_dir)
-            
-            return {
-                'success': True,
-                'message': f'{"文件" if is_file else "目录"} {source_name} 移动成功'
-            }
-        except Exception as e:
-            logger.error(f"移动失败: {str(e)}")
-            return {'success': False, 'message': '移动操作失败，请稍后重试'}
-    
-    def delete_item(self, path):
-        """删除文件或目录"""
-        # 验证路径安全性
-        is_safe, result = self.security_service.validate_path_safety(path)
-        if not is_safe:
-            return {'success': False, 'message': result}
-        
-        full_path = result
-        logger.info(f"尝试删除: {path}")
-        
-        # 检查路径是否存在
-        if not os.path.exists(full_path):
-            logger.warning(f"要删除的文件或目录不存在: {full_path}")
-            return {'success': False, 'message': '文件或目录不存在'}
-        
-        try:
-            # 删除文件或目录
-            item_name = os.path.basename(full_path)
-            is_file = os.path.isfile(full_path)
-            if is_file:
-                os.remove(full_path)
-                item_type = '文件'
-                logger.info(f"文件删除成功: {full_path}")
-            else:
-                shutil.rmtree(full_path)
-                item_type = '目录'
-                logger.info(f"目录删除成功: {full_path}")
-            
-            # 清除相关缓存
-            self._invalidate_related_caches(full_path, 'delete')
-            
-            return {
-                'success': True,
-                'message': f'{item_type} {item_name} 删除成功'
-            }
-        except PermissionError:
-            logger.error(f"没有权限删除: {full_path}")
-            return {'success': False, 'message': '没有权限删除此文件或目录'}
-        except Exception as e:
-            logger.error(f"删除失败: {str(e)}")
-            return {'success': False, 'message': '删除操作失败，请稍后重试'}
-    
-    def create_folder(self, parent_dir, folder_name):
-        """创建新文件夹"""
-        # 检查文件夹名是否有效
-        if not folder_name or folder_name.strip() == '':
-            return {'success': False, 'message': '文件夹名不能为空'}
-        
-        # 检查文件夹名是否包含非法字符
-        invalid_chars = '<>:"|?*'
-        if any(char in folder_name for char in invalid_chars):
-            return {'success': False, 'message': f'文件夹名不能包含以下字符: {invalid_chars}'}
-        
-        # 验证父目录路径安全性
-        is_safe, result = self.security_service.validate_path_safety(parent_dir)
-        if not is_safe:
-            return {'success': False, 'message': result}
-        
-        full_parent_dir = result
-        full_path = os.path.join(full_parent_dir, folder_name)
-        
-        # 检查父目录是否存在
-        if not os.path.exists(full_parent_dir) or not os.path.isdir(full_parent_dir):
-            return {'success': False, 'message': '父目录不存在'}
-        
-        # 检查文件夹是否已存在
-        if os.path.exists(full_path):
-            return {'success': False, 'message': f'文件夹 {folder_name} 已存在'}
-        
-        try:
-            # 创建文件夹
-            os.makedirs(full_path)
-            logger.info(f"文件夹创建成功: {full_path}")
-            
-            # 清除父目录缓存
-            self._invalidate_directory_cache(parent_dir)
-            
-            return {
-                'success': True,
-                'message': f'文件夹 {folder_name} 创建成功',
-                'folder': {
-                    'name': folder_name,
-                    'path': os.path.join(parent_dir, folder_name).replace('\\', '/'),
-                    'type': 'directory'
-                }
-            }
-        except Exception as e:
-            logger.error(f"创建文件夹失败: {str(e)}")
-            return {'success': False, 'message': str(e)}
-    
-    def rename_item(self, path, new_name):
-        """重命名文件或目录"""
-        # 检查新名称是否有效
-        if not new_name or new_name.strip() == '':
-            return {'success': False, 'message': '新名称不能为空'}
-        
-        # 检查新名称是否包含非法字符
-        invalid_chars = '<>:"|?*'
-        if any(char in new_name for char in invalid_chars):
-            return {'success': False, 'message': f'新名称不能包含以下字符: {invalid_chars}'}
-        
-        # 验证路径安全性
-        is_safe, result = self.security_service.validate_path_safety(path)
-        if not is_safe:
-            return {'success': False, 'message': result}
-        
-        full_path = result
-        
-        # 检查路径是否存在
-        if not os.path.exists(full_path):
-            return {'success': False, 'message': '文件或目录不存在'}
-        
-        try:
-            # 获取父目录和新路径
-            parent_dir = os.path.dirname(full_path)
-            new_path = os.path.join(parent_dir, new_name)
-            
-            # 检查新路径是否已存在
-            if os.path.exists(new_path):
-                return {'success': False, 'message': f'已存在同名文件或目录: {new_name}'}
-            
-            # 重命名文件或目录
-            os.rename(full_path, new_path)
-            logger.info(f"重命名成功: {full_path} -> {new_path}")
-            
-            # 清除相关缓存
-            self._invalidate_related_caches(full_path, 'rename')
-            self._invalidate_related_caches(new_path, 'rename')
-            
-            # 计算相对路径
-            rel_parent_dir = os.path.dirname(path)
-            rel_new_path = os.path.join(rel_parent_dir, new_name).replace('\\', '/')
-            
-            return {
-                'success': True,
-                'message': f'{"文件" if os.path.isfile(new_path) else "目录"} 重命名成功',
-                'new_path': rel_new_path,
-                'new_name': new_name
-            }
-        except Exception as e:
-            logger.error(f"重命名失败: {str(e)}")
-            return {'success': False, 'message': str(e)}
-    
-    def _get_directory_items(self, directory_path, relative_path):
-        """获取目录内容并返回格式化列表"""
-        items = []
-        try:
-            for item in os.listdir(directory_path):
-                try:
-                    item_path = os.path.join(directory_path, item)
-                    file_info = self._get_file_info(item_path)
-                    if file_info:
-                        file_info['path'] = os.path.join(relative_path, item).replace('\\', '/')
-                        items.append(file_info)
-                except Exception as item_error:
-                    logger.error(f"获取文件信息失败: {item}, 错误: {str(item_error)}")
-            
-            # 按类型和名称排序：先目录后文件，同类型按名称排序
-            items.sort(key=lambda x: (0 if x['type'] == 'directory' else 1, x['name'].lower()))
-            return items
-        except PermissionError:
-            logger.error(f"没有权限访问目录: {directory_path}")
-            return []
-        except Exception as e:
-            logger.error(f"读取目录失败: {directory_path}, 错误: {str(e)}")
-            return []
-    
-    def _get_file_info(self, file_path):
+    def get_file_info(self, file_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
         """获取文件信息"""
+        start_time = time.time()
+        
         try:
-            # 1. 检查缓存
-            cache_key = f"file_info:{file_path}"
-            cached_info = self.cache_service.get(cache_key)
-            if cached_info:
-                return cached_info
+            # 安全检查
+            if not FileUtils.is_safe_path(file_path):
+                raise ValueError("不安全的路径")
             
-            # 2. 从文件系统获取
-            stat = os.stat(file_path)
-            file_info = {
-                'name': os.path.basename(file_path),
-                'type': 'directory' if os.path.isdir(file_path) else 'file',
-                'size': stat.st_size if os.path.isfile(file_path) else 0,
-                'modified': int(stat.st_mtime),
-                'created': int(stat.st_ctime),
-                'permissions': oct(stat.st_mode)[-3:],
-                'mime_type': mimetypes.guess_type(file_path)[0] if os.path.isfile(file_path) else None
-            }
+            # 获取文件信息
+            file_info = FileUtils.get_file_info(file_path)
+            if not file_info:
+                raise FileNotFoundError("文件不存在")
             
-            # 计算文件哈希（仅对文件）
-            if os.path.isfile(file_path) and stat.st_size < 10 * 1024 * 1024:  # 小于10MB的文件
-                try:
-                    with open(file_path, 'rb') as f:
-                        file_info['md5'] = hashlib.md5(f.read()).hexdigest()
-                except:
-                    file_info['md5'] = None
+            # 保存文件信息到数据库
+            self._save_file_info_to_db(file_path, file_info)
             
-            # 3. 缓存结果（10分钟过期）
-            self.cache_service.set(cache_key, file_info, ttl=600)
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='get_file_info',
+                file_path=file_path,
+                file_name=file_info['name'],
+                file_size=file_info['size'],
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
             
             return file_info
-        except Exception as e:
-            logger.error(f"获取文件信息失败: {file_path}, 错误: {str(e)}")
-            return None
-
-    def _invalidate_related_caches(self, file_path, operation_type):
-        """使相关缓存失效
-        
-        Args:
-            file_path: 文件路径（绝对路径）
-            operation_type: 操作类型 (create, delete, modify, move)
-        """
-        try:
-            # 获取目录路径（绝对路径）
-            dir_path = os.path.dirname(file_path)
-            if dir_path == '':
-                dir_path = '.'
-            
-            # 使文件信息缓存失效
-            file_cache_key = f"file_info:{file_path}"
-            self.cache_service.delete(file_cache_key)
-            
-            # 计算相对路径（用于目录列表缓存）
-            try:
-                from core.config import Config
-                config = Config()
-                if file_path.startswith(config.ROOT_DIR):
-                    relative_dir = os.path.relpath(dir_path, config.ROOT_DIR)
-                    if relative_dir == '.':
-                        relative_dir = ''
-                else:
-                    relative_dir = dir_path
-            except:
-                relative_dir = dir_path
-            
-            # 使目录列表缓存失效（使用相对路径）
-            dir_cache_key = f"dir_listing:{relative_dir}"
-            self.cache_service.delete(dir_cache_key)
-            
-            logger.info(f"已清除相关缓存: {file_path} ({operation_type})")
-            logger.info(f"  绝对路径: {file_path}")
-            logger.info(f"  目录路径: {dir_path}")
-            logger.info(f"  相对路径: {relative_dir}")
-            logger.info(f"  文件缓存键: {file_cache_key}")
-            logger.info(f"  目录缓存键: {dir_cache_key}")
             
         except Exception as e:
-            logger.error(f"清除缓存失败: {e}")
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='get_file_info',
+                file_path=file_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
     
-    def _invalidate_directory_cache(self, dir_path):
-        """使目录缓存失效"""
+    def create_directory(self, directory_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """创建目录"""
+        start_time = time.time()
+        
         try:
-            # 使用相对路径作为缓存键
-            dir_cache_key = f"dir_listing:{dir_path}"
-            self.cache_service.delete(dir_cache_key)
-            logger.debug(f"已清除目录缓存: {dir_path}")
+            # 安全检查
+            if not FileUtils.is_safe_path(directory_path):
+                raise ValueError("不安全的路径")
+            
+            # 检查目录是否已存在
+            if os.path.exists(directory_path):
+                raise FileExistsError("目录已存在")
+            
+            # 创建目录
+            os.makedirs(directory_path, exist_ok=True)
+            
+            # 获取新创建的目录信息
+            dir_info = FileUtils.get_file_info(directory_path)
+            
+            # 保存目录信息到数据库
+            self._save_file_info_to_db(directory_path, dir_info)
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='create_folder',
+                file_path=directory_path,
+                file_name=dir_info['name'],
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': '目录创建成功',
+                'directory': dir_info
+            }
+            
         except Exception as e:
-            logger.error(f"清除目录缓存失败: {e}")
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='create_folder',
+                file_path=directory_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def delete_file(self, file_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """删除文件或目录"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(file_path):
+                raise ValueError("不安全的路径")
+            
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError("文件不存在")
+            
+            # 获取文件信息（用于日志记录）
+            file_info = FileUtils.get_file_info(file_path)
+            
+            # 删除文件或目录
+            if os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+                operation_type = 'delete_folder'
+            else:
+                os.remove(file_path)
+                operation_type = 'delete'
+            
+            # 从数据库删除文件信息
+            self._delete_file_info_from_db(file_path)
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type=operation_type,
+                file_path=file_path,
+                file_name=file_info['name'] if file_info else None,
+                file_size=file_info['size'] if file_info else None,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': '删除成功',
+                'deleted_path': file_path
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='delete',
+                file_path=file_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def rename_file(self, old_path: str, new_name: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """重命名文件或目录"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(old_path):
+                raise ValueError("不安全的路径")
+            
+            if not FileUtils.is_safe_path(new_name):
+                raise ValueError("新名称包含不安全字符")
+            
+            # 检查源文件是否存在
+            if not os.path.exists(old_path):
+                raise FileNotFoundError("源文件不存在")
+            
+            # 构建新路径
+            parent_dir = os.path.dirname(old_path)
+            new_path = os.path.join(parent_dir, new_name)
+            
+            # 检查目标文件是否已存在
+            if os.path.exists(new_path):
+                raise FileExistsError("目标文件已存在")
+            
+            # 获取原文件信息
+            old_file_info = FileUtils.get_file_info(old_path)
+            
+            # 重命名文件
+            os.rename(old_path, new_path)
+            
+            # 获取新文件信息
+            new_file_info = FileUtils.get_file_info(new_path)
+            
+            # 更新数据库中的文件信息
+            if self.mysql_service and self.mysql_service.is_connected():
+                try:
+                    # 删除旧记录
+                    self._delete_file_info_from_db(old_path)
+                    # 添加新记录
+                    self._save_file_info_to_db(new_path, new_file_info)
+                except Exception as db_error:
+                    logger.warning(f"更新数据库文件信息失败: {db_error}")
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='rename',
+                file_path=new_path,
+                file_name=new_file_info['name'],
+                file_size=new_file_info['size'],
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': '重命名成功',
+                'old_path': old_path,
+                'new_path': new_path,
+                'file_info': new_file_info
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='rename',
+                file_path=old_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def move_file(self, source_path: str, target_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """移动文件或目录"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(source_path):
+                raise ValueError("源路径不安全")
+            
+            if not FileUtils.is_safe_path(target_path):
+                raise ValueError("目标路径不安全")
+            
+            # 检查源文件是否存在
+            if not os.path.exists(source_path):
+                raise FileNotFoundError("源文件不存在")
+            
+            # 检查目标路径是否已存在
+            if os.path.exists(target_path):
+                raise FileExistsError("目标路径已存在")
+            
+            # 获取源文件信息
+            source_file_info = FileUtils.get_file_info(source_path)
+            
+            # 移动文件
+            shutil.move(source_path, target_path)
+            
+            # 获取移动后的文件信息
+            target_file_info = FileUtils.get_file_info(target_path)
+            
+            # 更新数据库中的文件信息
+            if self.mysql_service and self.mysql_service.is_connected():
+                try:
+                    # 删除旧记录
+                    self._delete_file_info_from_db(source_path)
+                    # 添加新记录
+                    self._save_file_info_to_db(target_path, target_file_info)
+                except Exception as db_error:
+                    logger.warning(f"更新数据库文件信息失败: {db_error}")
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='move',
+                file_path=target_path,
+                file_name=target_file_info['name'],
+                file_size=target_file_info['size'],
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': '移动成功',
+                'source_path': source_path,
+                'target_path': target_path,
+                'file_info': target_file_info
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='move',
+                file_path=source_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def copy_file(self, source_path: str, target_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """复制文件或目录"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(source_path):
+                raise ValueError("源路径不安全")
+            
+            if not FileUtils.is_safe_path(target_path):
+                raise ValueError("目标路径不安全")
+            
+            # 检查源文件是否存在
+            if not os.path.exists(source_path):
+                raise FileNotFoundError("源文件不存在")
+            
+            # 检查目标路径是否已存在
+            if os.path.exists(target_path):
+                raise FileExistsError("目标路径已存在")
+            
+            # 获取源文件信息
+            source_file_info = FileUtils.get_file_info(source_path)
+            
+            # 复制文件
+            if os.path.isdir(source_path):
+                shutil.copytree(source_path, target_path)
+            else:
+                shutil.copy2(source_path, target_path)
+            
+            # 获取复制后的文件信息
+            target_file_info = FileUtils.get_file_info(target_path)
+            
+            # 保存新文件信息到数据库
+            self._save_file_info_to_db(target_path, target_file_info)
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='copy',
+                file_path=target_path,
+                file_name=target_file_info['name'],
+                file_size=target_file_info['size'],
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'success': True,
+                'message': '复制成功',
+                'source_path': source_path,
+                'target_path': target_path,
+                'file_info': target_file_info
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='copy',
+                file_path=source_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise
+    
+    def search_files(self, search_path: str, query: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """搜索文件"""
+        start_time = time.time()
+        
+        try:
+            # 安全检查
+            if not FileUtils.is_safe_path(search_path):
+                raise ValueError("搜索路径不安全")
+            
+            if not query or len(query.strip()) == 0:
+                raise ValueError("搜索查询不能为空")
+            
+            # 执行搜索
+            results = []
+            query_lower = query.lower()
+            
+            for root, dirs, files in os.walk(search_path):
+                # 搜索目录
+                for dir_name in dirs:
+                    if query_lower in dir_name.lower():
+                        dir_path = os.path.join(root, dir_name)
+                        dir_info = FileUtils.get_file_info(dir_path)
+                        if dir_info:
+                            results.append(dir_info)
+                
+                # 搜索文件
+                for file_name in files:
+                    if query_lower in file_name.lower():
+                        file_path = os.path.join(root, file_name)
+                        file_info = FileUtils.get_file_info(file_path)
+                        if file_info:
+                            results.append(file_info)
+            
+            # 按类型和名称排序
+            results.sort(key=lambda x: (not x['is_directory'], x['name'].lower()))
+            
+            # 记录操作日志
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='search',
+                file_path=search_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success',
+                duration_ms=duration_ms
+            )
+            
+            return {
+                'search_path': search_path,
+                'query': query,
+                'results': results,
+                'total_results': len(results)
+            }
+            
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self._log_operation(
+                operation_type='search',
+                file_path=search_path,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='failed',
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+            raise

@@ -94,6 +94,41 @@ redis:
     socket_keepalive: true
     health_check_interval: 30
 
+# MySQL数据库配置
+mysql:
+  host: "localhost"
+  port: 3306
+  database: "file_manager"
+  username: "root"
+  password: "z6tsJw9NqvsDy6vZ"
+  charset: "utf8mb4"
+  
+  # 连接池配置
+  pool_config:
+    max_connections: 20
+    min_connections: 5
+    pool_recycle: 3600  # 1小时
+    pool_pre_ping: true
+    echo: false
+  
+  # 数据库选项
+  options:
+    autocommit: true
+    isolation_level: "READ_COMMITTED"
+    connect_timeout: 10
+    read_timeout: 30
+    write_timeout: 30
+  
+  # 日志保留策略
+  log_retention:
+    enabled: true
+    retention_days: 30  # 保留30天
+    auto_cleanup: true  # 自动清理
+    cleanup_schedule: "0 2 * * *"  # 每天凌晨2点清理
+    optimize_schedule: "0 3 * * 0"  # 每周日凌晨3点优化表
+    max_records: 100000  # 最大记录数警告阈值
+    cleanup_batch_size: 1000  # 批量清理大小
+
 # 前端配置
 frontend_config:
   app_name: "文件管理系统"
@@ -123,8 +158,8 @@ security:
   enable_file_type_detection: true
   
   # 文件类型验证
-  forbidden_extensions: [".exe", ".bat", ".cmd", ".com", ".pif", ".scr"]
-  allow_executable_files: false
+  forbidden_extensions: [".bat", ".cmd", ".com", ".pif", ".scr"]  # 移除.exe限制
+  allow_executable_files: true  # 允许可执行文件
 
 # 日志配置
 logging:
