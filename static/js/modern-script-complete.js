@@ -30,6 +30,15 @@ const folderTree = document.getElementById('folder-tree');
 const confirmMoveCopyBtn = document.getElementById('confirm-move-copy-btn');
 const cancelMoveCopyBtn = document.getElementById('cancel-move-copy-btn');
 
+// 错误处理配置
+const ERROR_CONFIG = {
+    retryAttempts: 3,
+    retryDelay: 1000,
+    showDetails: false, // 是否显示详细错误信息
+    autoHideDelay: 8000, // 错误通知自动隐藏时间
+    maxNotifications: 5 // 最大同时显示的通知数量
+};
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM内容加载完成，开始初始化");
@@ -83,6 +92,353 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("页面初始化完成");
 });
 
+// 增强的错误处理函数
+function showError(message, details = null, retryFunction = null) {
+    const notification = document.createElement('div');
+    notification.className = 'notification error';
+    
+    let content = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+    
+    // 添加详细信息（如果启用）
+    if (details && ERROR_CONFIG.showDetails) {
+        content += `<details><summary>详细信息</summary><pre>${details}</pre></details>`;
+    }
+    
+    // 添加重试按钮（如果提供）
+    if (retryFunction) {
+        content += `<button class="retry-btn" onclick="this.parentElement.remove(); ${retryFunction.name}()">重试</button>`;
+    }
+    
+    notification.innerHTML = content;
+    
+    // 添加错误通知的特殊样式
+    notification.style.borderLeft = '4px solid #dc3545';
+    notification.style.backgroundColor = '#f8d7da';
+    notification.style.color = '#721c24';
+    
+    // 限制通知数量
+    const currentNotifications = notificationContainer.querySelectorAll('.notification.error');
+    if (currentNotifications.length >= ERROR_CONFIG.maxNotifications) {
+        currentNotifications[0].remove();
+    }
+    
+    notificationContainer.appendChild(notification);
+    
+    // 自动隐藏（错误通知显示时间更长）
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, ERROR_CONFIG.autoHideDelay);
+    
+    // 记录错误到控制台
+    console.error('用户错误:', message, details);
+    
+    // 记录到日志（如果可用）
+    logError(message, details);
+}
+
+// 增强的成功通知函数
+function showSuccess(message, details = null) {
+    const notification = document.createElement('div');
+    notification.className = 'notification success';
+    
+    let content = `<i class="fas fa-check-circle"></i> ${message}`;
+    
+    if (details && ERROR_CONFIG.showDetails) {
+        content += `<details><summary>详细信息</summary><pre>${details}</pre></details>`;
+    }
+    
+    notification.innerHTML = content;
+    notification.style.borderLeft = '4px solid #28a745';
+    notification.style.backgroundColor = '#d4edda';
+    notification.style.color = '#155724';
+    
+    notificationContainer.appendChild(notification);
+    
+    // 成功通知显示时间较短
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+    
+    console.log('用户成功:', message, details);
+}
+
+// 增强的警告通知函数
+function showWarning(message, details = null) {
+    const notification = document.createElement('div');
+    notification.className = 'notification warning';
+    
+    let content = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+    
+    if (details && ERROR_CONFIG.showDetails) {
+        content += `<details><summary>详细信息</summary><pre>${details}</pre></details>`;
+    }
+    
+    notification.innerHTML = content;
+    notification.style.borderLeft = '4px solid #ffc107';
+    notification.style.backgroundColor = '#fff3cd';
+    notification.style.color = '#856404';
+    
+    notificationContainer.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 6000);
+    
+    console.warn('用户警告:', message, details);
+}
+
+// 增强的信息通知函数
+function showInfo(message, details = null) {
+    const notification = document.createElement('div');
+    notification.className = 'notification info';
+    
+    let content = `<i class="fas fa-info-circle"></i> ${message}`;
+    
+    if (details && ERROR_CONFIG.showDetails) {
+        content += `<details><summary>详细信息</summary><pre>${details}</pre></details>`;
+    }
+    
+    notification.innerHTML = content;
+    notification.style.borderLeft = '4px solid #17a2b8';
+    notification.style.backgroundColor = '#d1ecf1';
+    notification.style.color = '#0c5460';
+    
+    notificationContainer.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 4000);
+    
+    console.log('用户信息:', message, details);
+}
+
+// 统一的通知函数（保持向后兼容）
+function showNotification(message, type = 'info', details = null) {
+    switch (type.toLowerCase()) {
+        case 'error':
+            showError(message, details);
+            break;
+        case 'success':
+            showSuccess(message, details);
+            break;
+        case 'warning':
+            showWarning(message, details);
+            break;
+        case 'info':
+        default:
+            showInfo(message, details);
+            break;
+    }
+}
+
+// 错误日志记录
+function logError(message, details = null) {
+    try {
+        const errorLog = {
+            timestamp: new Date().toISOString(),
+            message: message,
+            details: details,
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            stack: new Error().stack
+        };
+        
+        // 发送到服务器（如果可用）
+        if (typeof logErrorToServer === 'function') {
+            logErrorToServer(errorLog);
+        }
+        
+        // 存储到本地存储
+        const errorLogs = JSON.parse(localStorage.getItem('errorLogs') || '[]');
+        errorLogs.push(errorLog);
+        
+        // 只保留最近100条错误记录
+        if (errorLogs.length > 100) {
+            errorLogs.splice(0, errorLogs.length - 100);
+        }
+        
+        localStorage.setItem('errorLogs', JSON.stringify(errorLogs));
+        
+    } catch (e) {
+        console.error('记录错误日志失败:', e);
+    }
+}
+
+// 网络请求错误处理
+function handleNetworkError(error, operation = '操作') {
+    let userMessage = '网络请求失败';
+    let technicalDetails = '';
+    
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        userMessage = '无法连接到服务器，请检查网络连接';
+        technicalDetails = '网络连接失败或服务器无响应';
+    } else if (error.status === 404) {
+        userMessage = '请求的资源不存在';
+        technicalDetails = `HTTP 404: ${error.statusText}`;
+    } else if (error.status === 500) {
+        userMessage = '服务器内部错误';
+        technicalDetails = `HTTP 500: ${error.statusText}`;
+    } else if (error.status >= 400) {
+        userMessage = '请求失败';
+        technicalDetails = `HTTP ${error.status}: ${error.statusText}`;
+    } else if (error.status === 0) {
+        userMessage = '网络连接被中断';
+        technicalDetails = '请求被取消或网络中断';
+    }
+    
+    showError(`${operation}失败: ${userMessage}`, technicalDetails);
+    
+    // 记录详细错误信息
+    console.error(`${operation}网络错误:`, {
+        message: userMessage,
+        technical: technicalDetails,
+        original: error
+    });
+}
+
+// 重试机制
+function retryOperation(operation, maxAttempts = ERROR_CONFIG.retryAttempts) {
+    return function(...args) {
+        let attempts = 0;
+        
+        function attempt() {
+            attempts++;
+            try {
+                return operation.apply(this, args);
+            } catch (error) {
+                if (attempts < maxAttempts) {
+                    console.warn(`操作失败，${ERROR_CONFIG.retryDelay}ms后重试 (${attempts}/${maxAttempts}):`, error);
+                    
+                    setTimeout(() => {
+                        attempt();
+                    }, ERROR_CONFIG.retryDelay * attempts); // 递增延迟
+                    
+                    showWarning(`操作失败，正在重试 (${attempts}/${maxAttempts})...`);
+                } else {
+                    console.error(`操作失败，已达到最大重试次数 (${maxAttempts}):`, error);
+                    showError('操作失败，已达到最大重试次数', error.message);
+                    throw error;
+                }
+            }
+        }
+        
+        return attempt();
+    };
+}
+
+// 增强的API请求函数
+async function apiRequest(url, options = {}) {
+    const defaultOptions = {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        ...options
+    };
+    
+    try {
+        const response = await fetch(url, defaultOptions);
+        
+        // 检查HTTP状态码
+        if (!response.ok) {
+            const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            error.status = response.status;
+            error.statusText = response.statusText;
+            
+            // 尝试解析错误响应
+            try {
+                const errorData = await response.json();
+                error.details = errorData;
+            } catch (e) {
+                // 如果无法解析JSON，使用文本
+                error.details = await response.text();
+            }
+            
+            throw error;
+        }
+        
+        // 尝试解析JSON响应
+        try {
+            return await response.json();
+        } catch (e) {
+            // 如果不是JSON，返回文本
+            return await response.text();
+        }
+        
+    } catch (error) {
+        // 网络错误处理
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            handleNetworkError(error, 'API请求');
+        } else {
+            // HTTP错误处理
+            handleNetworkError(error, 'API请求');
+        }
+        throw error;
+    }
+}
+
+// 文件操作错误处理
+function handleFileOperationError(error, operation, filePath) {
+    let userMessage = `${operation}失败`;
+    let technicalDetails = '';
+    
+    if (error.message.includes('权限')) {
+        userMessage = `没有权限${operation}文件`;
+        technicalDetails = '权限不足或文件被占用';
+    } else if (error.message.includes('不存在')) {
+        userMessage = `文件不存在`;
+        technicalDetails = '文件已被删除或移动';
+    } else if (error.message.includes('空间')) {
+        userMessage = `磁盘空间不足`;
+        technicalDetails = '请清理磁盘空间后重试';
+    } else if (error.message.includes('类型')) {
+        userMessage = `不支持的文件类型`;
+        technicalDetails = '文件类型不在允许列表中';
+    } else if (error.message.includes('大小')) {
+        userMessage = `文件过大`;
+        technicalDetails = '文件大小超过限制';
+    }
+    
+    showError(userMessage, technicalDetails);
+    
+    // 记录文件操作错误
+    logError(`${operation}失败: ${filePath}`, {
+        operation: operation,
+        filePath: filePath,
+        error: error.message
+    });
+}
+
+// 全局错误处理器
+window.addEventListener('error', (event) => {
+    const error = event.error || event;
+    showError('页面发生错误', error.message);
+    logError('页面错误', {
+        message: error.message,
+        filename: error.filename,
+        lineno: error.lineno,
+        colno: error.colno,
+        stack: error.stack
+    });
+});
+
+// 未处理的Promise拒绝
+window.addEventListener('unhandledrejection', (event) => {
+    showError('未处理的异步错误', event.reason);
+    logError('未处理的Promise拒绝', {
+        reason: event.reason,
+        promise: event.promise
+    });
+});
+
 // 添加键盘事件监听器
 function addKeyboardEventListeners() {
     // 在新建文件夹模态框中按Enter键确认
@@ -103,18 +459,38 @@ function addKeyboardEventListeners() {
         }
     });
     
-    // 全局Escape键关闭模态框
+    // 全局快捷键
     document.addEventListener('keydown', (e) => {
+        // Ctrl+N: 新建文件夹
+        if (e.ctrlKey && e.key === 'n') {
+            e.preventDefault();
+            showNewFolderModal();
+        }
+        
+        // Ctrl+U: 上传文件
+        if (e.ctrlKey && e.key === 'u') {
+            e.preventDefault();
+            fileUploadInput.click();
+        }
+        
+        // F5: 刷新文件列表
+        if (e.key === 'F5') {
+            e.preventDefault();
+            loadFileList();
+        }
+        
+        // Escape: 关闭所有模态框
         if (e.key === 'Escape') {
-            if (newFolderModal.style.display === 'block') {
-                hideNewFolderModal();
-            } else if (renameModal.style.display === 'block') {
-                hideRenameModal();
-            } else if (moveCopyModal.style.display === 'block') {
-                hideMoveCopyModal();
-            }
+            hideAllModals();
         }
     });
+}
+
+// 关闭所有模态框
+function hideAllModals() {
+    hideNewFolderModal();
+    hideRenameModal();
+    hideMoveCopyModal();
 }
 
 // 使模态框可拖动
@@ -1104,69 +1480,6 @@ function showStatus(message, type = 'info') {
             statusMessage.style.opacity = '0';
         }, 3000);
     }
-}
-
-// 显示通知
-function showNotification(message, type = 'info') {
-    // 获取当前所有通知
-    const notifications = notificationContainer.querySelectorAll('.notification');
-    
-    // 如果已经有2条通知，移除最旧的一条
-    if (notifications.length >= 2) {
-        const oldestNotification = notifications[0];
-        oldestNotification.classList.add('notification-hide');
-        setTimeout(() => {
-            if (oldestNotification.parentNode) {
-                oldestNotification.remove();
-            }
-        }, 300);
-    }
-    
-    // 创建通知元素
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    
-    // 设置图标
-    let icon = 'info-circle';
-    if (type === 'success') icon = 'check-circle';
-    if (type === 'error') icon = 'exclamation-circle';
-    if (type === 'warning') icon = 'exclamation-triangle';
-    
-    notification.innerHTML = `
-        <i class="fas fa-${icon}"></i>
-        <span>${message}</span>
-        <button class="close-notification"><i class="fas fa-times"></i></button>
-    `;
-    
-    // 添加关闭按钮事件
-    notification.querySelector('.close-notification').addEventListener('click', () => {
-        notification.classList.add('notification-hide');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 300);
-    });
-    
-    // 添加到通知容器
-    notificationContainer.appendChild(notification);
-    
-    // 添加显示类（用于动画）
-    setTimeout(() => {
-        notification.classList.add('notification-show');
-    }, 10);
-    
-    // 5秒后自动关闭
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.classList.add('notification-hide');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
-        }
-    }, 5000);
 }
 
 // 居中显示模态框

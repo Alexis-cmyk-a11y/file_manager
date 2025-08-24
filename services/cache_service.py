@@ -1,426 +1,256 @@
 """
 缓存服务模块
-使用Redis作为后端存储，提供文件管理器的缓存功能
+提供Redis和内存缓存的双重保障
 """
 
+import os
+import time
 import hashlib
 import json
-import time
-from typing import Any, Optional, Dict, List, Union
+from typing import Any, Optional, Union
 from utils.logger import get_logger
 
-logger = get_logger('cache_service')
+logger = get_logger(__name__)
 
 class CacheService:
     """缓存服务类"""
     
-    def __init__(self, default_ttl: int = 3600):
-        """初始化缓存服务
-        
-        Args:
-            default_ttl: 默认缓存生存时间（秒）
-        """
-        self.default_ttl = default_ttl
-        # 延迟导入避免循环依赖
+    def __init__(self):
+        self.memory_cache = {}
         self.redis_service = None
-        self.cache_prefix = "file_manager:"
+        self._init_redis()
     
-    def _get_redis_service(self):
-        """获取Redis服务实例（延迟加载）"""
-        if self.redis_service is None:
+    def _init_redis(self):
+        """初始化Redis服务"""
+        try:
             from services.redis_service import get_redis_service
             self.redis_service = get_redis_service()
-        return self.redis_service
-    
-    def _make_key(self, key: str) -> str:
-        """生成缓存键"""
-        return f"{self.cache_prefix}{key}"
-    
-    def _make_hash_key(self, data: Any) -> str:
-        """根据数据生成哈希键"""
-        if isinstance(data, str):
-            content = data
-        else:
-            content = json.dumps(data, sort_keys=True, ensure_ascii=False)
-        
-        return hashlib.md5(content.encode('utf-8')).hexdigest()
-    
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """设置缓存
-        
-        Args:
-            key: 缓存键
-            value: 缓存值
-            ttl: 生存时间（秒），None使用默认值
-            
-        Returns:
-            bool: 是否设置成功
-        """
-        try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                logger.warning("Redis未连接，缓存操作失败")
-                return False
-            
-            cache_key = self._make_key(key)
-            ttl = ttl if ttl is not None else self.default_ttl
-            
-            return redis_service.set(cache_key, value, ex=ttl)
+            if self.redis_service and self.redis_service.is_connected():
+                logger.info("Redis缓存服务已启用")
+            else:
+                logger.warning("Redis服务不可用，将使用内存缓存")
+                self.redis_service = None
         except Exception as e:
-            logger.error(f"设置缓存失败: {e}")
-            return False
+            logger.warning(f"Redis服务初始化失败: {e}")
+            self.redis_service = None
+    
+    def _get_cache_ttl(self, key: str, data_type: str = None, data_size: int = None) -> int:
+        """根据缓存键类型和数据特征动态调整TTL"""
+        # 目录列表缓存策略
+        if key.startswith('dir_listing:'):
+            if key == 'dir_listing:':  # 根目录
+                return 300  # 5分钟
+            elif data_size and data_size > 1000:  # 大目录
+                return 60   # 1分钟
+            else:
+                return 180  # 3分钟
+        
+        # 文件信息缓存策略
+        elif key.startswith('file_info:'):
+            return 600  # 10分钟
+        
+        # 用户会话缓存
+        elif key.startswith('session:'):
+            return 3600  # 1小时
+        
+        # 系统配置缓存
+        elif key.startswith('config:'):
+            return 1800  # 30分钟
+        
+        # 默认缓存时间
+        return 300
+    
+    def _generate_cache_key(self, prefix: str, *args) -> str:
+        """生成缓存键"""
+        key_parts = [prefix] + [str(arg) for arg in args]
+        key_string = ':'.join(key_parts)
+        return hashlib.md5(key_string.encode()).hexdigest()[:16]
     
     def get(self, key: str, default: Any = None) -> Any:
-        """获取缓存
-        
-        Args:
-            key: 缓存键
-            default: 默认值
-            
-        Returns:
-            缓存值或默认值
-        """
+        """获取缓存值"""
         try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return default
+            # 1. 先检查内存缓存
+            if key in self.memory_cache:
+                item = self.memory_cache[key]
+                if time.time() < item['expires_at']:
+                    logger.debug(f"从内存缓存获取: {key}")
+                    return item['value']
+                else:
+                    # 清理过期缓存
+                    del self.memory_cache[key]
             
-            cache_key = self._make_key(key)
-            return redis_service.get(cache_key, default)
+            # 2. 检查Redis缓存
+            if self.redis_service and self.redis_service.is_connected():
+                try:
+                    value = self.redis_service.get(key)
+                    if value:
+                        # 解析JSON数据
+                        try:
+                            parsed_value = json.loads(value)
+                            logger.debug(f"从Redis缓存获取: {key}")
+                            return parsed_value
+                        except json.JSONDecodeError:
+                            return value
+                except Exception as e:
+                    logger.warning(f"Redis获取缓存失败: {e}")
+            
+            return default
+            
         except Exception as e:
-            logger.error(f"获取缓存失败: {e}")
+            logger.error(f"获取缓存失败: {key}, 错误: {e}")
             return default
     
+    def set(self, key: str, value: Any, ttl: Optional[int] = None, 
+            data_type: str = None, data_size: int = None) -> bool:
+        """设置缓存值"""
+        try:
+            # 动态计算TTL
+            if ttl is None:
+                ttl = self._get_cache_ttl(key, data_type, data_size)
+            
+            # 1. 设置内存缓存
+            expires_at = time.time() + ttl
+            self.memory_cache[key] = {
+                'value': value,
+                'expires_at': expires_at,
+                'created_at': time.time()
+            }
+            
+            # 2. 设置Redis缓存
+            if self.redis_service and self.redis_service.is_connected():
+                try:
+                    # 序列化数据
+                    if isinstance(value, (dict, list)):
+                        serialized_value = json.dumps(value, ensure_ascii=False)
+                    else:
+                        serialized_value = str(value)
+                    
+                    self.redis_service.set(key, serialized_value, ex=ttl)
+                    logger.debug(f"缓存已设置: {key}, TTL: {ttl}s")
+                except Exception as e:
+                    logger.warning(f"Redis设置缓存失败: {e}")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"设置缓存失败: {key}, 错误: {e}")
+            return False
+    
     def delete(self, key: str) -> bool:
-        """删除缓存
-        
-        Args:
-            key: 缓存键
-            
-        Returns:
-            bool: 是否删除成功
-        """
+        """删除缓存"""
         try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return False
+            # 删除内存缓存
+            if key in self.memory_cache:
+                del self.memory_cache[key]
             
-            cache_key = self._make_key(key)
-            return redis_service.delete(cache_key) > 0
+            # 删除Redis缓存
+            if self.redis_service and self.redis_service.is_connected():
+                try:
+                    self.redis_service.delete(key)
+                except Exception as e:
+                    logger.warning(f"Redis删除缓存失败: {e}")
+            
+            logger.debug(f"缓存已删除: {key}")
+            return True
+            
         except Exception as e:
-            logger.error(f"删除缓存失败: {e}")
+            logger.error(f"删除缓存失败: {key}, 错误: {e}")
             return False
     
-    def exists(self, key: str) -> bool:
-        """检查缓存是否存在
+    def clear_pattern(self, pattern: str) -> int:
+        """清除匹配模式的缓存"""
+        cleared_count = 0
         
-        Args:
-            key: 缓存键
-            
-        Returns:
-            bool: 是否存在
-        """
         try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return False
+            # 清除内存缓存
+            keys_to_delete = [k for k in self.memory_cache.keys() if pattern in k]
+            for key in keys_to_delete:
+                del self.memory_cache[key]
+                cleared_count += 1
             
-            cache_key = self._make_key(key)
-            return redis_service.exists(cache_key) > 0
+            # 清除Redis缓存
+            if self.redis_service and self.redis_service.is_connected():
+                try:
+                    # 获取匹配的键
+                    keys = self.redis_service.keys(pattern)
+                    if keys:
+                        self.redis_service.delete(*keys)
+                        cleared_count += len(keys)
+                except Exception as e:
+                    logger.warning(f"Redis清除模式缓存失败: {e}")
+            
+            logger.info(f"清除模式缓存完成: {pattern}, 共清除 {cleared_count} 个")
+            return cleared_count
+            
         except Exception as e:
-            logger.error(f"检查缓存存在性失败: {e}")
-            return False
+            logger.error(f"清除模式缓存失败: {pattern}, 错误: {e}")
+            return cleared_count
     
-    def expire(self, key: str, ttl: int) -> bool:
-        """设置缓存过期时间
-        
-        Args:
-            key: 缓存键
-            ttl: 生存时间（秒）
-            
-        Returns:
-            bool: 是否设置成功
-        """
+    def get_stats(self) -> dict:
+        """获取缓存统计信息"""
         try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return False
+            stats = {
+                'memory_cache': {
+                    'total_keys': len(self.memory_cache),
+                    'memory_usage': len(str(self.memory_cache)),
+                    'expired_keys': 0
+                },
+                'redis_cache': {
+                    'connected': False,
+                    'total_keys': 0,
+                    'memory_usage': 0
+                }
+            }
             
-            cache_key = self._make_key(key)
-            return redis_service.expire(cache_key, ttl)
-        except Exception as e:
-            logger.error(f"设置缓存过期时间失败: {e}")
-            return False
-    
-    def ttl(self, key: str) -> int:
-        """获取缓存剩余生存时间
-        
-        Args:
-            key: 缓存键
+            # 统计过期键
+            current_time = time.time()
+            expired_keys = [k for k, v in self.memory_cache.items() 
+                          if current_time >= v['expires_at']]
+            stats['memory_cache']['expired_keys'] = len(expired_keys)
             
-        Returns:
-            int: 剩余生存时间（秒），-1表示永不过期，-2表示键不存在
-        """
-        try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return -2
-            
-            cache_key = self._make_key(key)
-            return redis_service.ttl(cache_key)
-        except Exception as e:
-            logger.error(f"获取缓存生存时间失败: {e}")
-            return -2
-    
-    def clear_pattern(self, pattern: str = "*") -> int:
-        """清除匹配模式的缓存
-        
-        Args:
-            pattern: 匹配模式
-            
-        Returns:
-            int: 清除的缓存数量
-        """
-        try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return 0
-            
-            cache_pattern = self._make_key(pattern)
-            keys = redis_service.keys(cache_pattern)
-            
-            if keys:
-                return redis_service.delete(*keys)
-            return 0
-        except Exception as e:
-            logger.error(f"清除缓存失败: {e}")
-            return 0
-    
-    def clear_all(self) -> bool:
-        """清除所有缓存
-        
-        Returns:
-            bool: 是否清除成功
-        """
-        try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return False
-            
-            return redis_service.flushdb()
-        except Exception as e:
-            logger.error(f"清除所有缓存失败: {e}")
-            return False
-    
-    # 文件相关缓存方法
-    def cache_file_info(self, file_path: str, file_info: Dict[str, Any], ttl: Optional[int] = None) -> bool:
-        """缓存文件信息
-        
-        Args:
-            file_path: 文件路径
-            file_info: 文件信息
-            ttl: 生存时间（秒）
-            
-        Returns:
-            bool: 是否缓存成功
-        """
-        key = f"file_info:{self._make_hash_key(file_path)}"
-        return self.set(key, file_info, ttl)
-    
-    def get_cached_file_info(self, file_path: str) -> Optional[Dict[str, Any]]:
-        """获取缓存的文件信息
-        
-        Args:
-            file_path: 文件路径
-            
-        Returns:
-            文件信息或None
-        """
-        key = f"file_info:{self._make_hash_key(file_path)}"
-        return self.get(key)
-    
-    def cache_directory_listing(self, dir_path: str, listing: List[Dict[str, Any]], ttl: Optional[int] = None) -> bool:
-        """缓存目录列表
-        
-        Args:
-            dir_path: 目录路径
-            listing: 目录列表
-            ttl: 生存时间（秒）
-            
-        Returns:
-            bool: 是否缓存成功
-        """
-        key = f"dir_listing:{self._make_hash_key(dir_path)}"
-        return self.set(key, listing, ttl)
-    
-    def get_cached_directory_listing(self, dir_path: str) -> Optional[List[Dict[str, Any]]]:
-        """获取缓存的目录列表
-        
-        Args:
-            dir_path: 目录路径
-            
-        Returns:
-            目录列表或None
-        """
-        key = f"dir_listing:{self._make_hash_key(dir_path)}"
-        return self.get(key)
-    
-    def invalidate_file_cache(self, file_path: str) -> bool:
-        """使文件缓存失效
-        
-        Args:
-            file_path: 文件路径
-            
-        Returns:
-            bool: 是否成功
-        """
-        key = f"file_info:{self._make_hash_key(file_path)}"
-        return self.delete(key)
-    
-    def invalidate_directory_cache(self, dir_path: str) -> bool:
-        """使目录缓存失效
-        
-        Args:
-            dir_path: 目录路径
-            
-        Returns:
-            bool: 是否成功
-        """
-        key = f"dir_listing:{self._make_hash_key(dir_path)}"
-        return self.delete(key)
-    
-    def invalidate_all_file_caches(self) -> int:
-        """使所有文件相关缓存失效
-        
-        Returns:
-            int: 清除的缓存数量
-        """
-        return self.clear_pattern("file_info:*")
-    
-    def invalidate_all_directory_caches(self) -> int:
-        """使所有目录相关缓存失效
-        
-        Returns:
-            int: 清除的缓存数量
-        """
-        return self.clear_pattern("dir_listing:*")
-    
-    # 会话和用户相关缓存
-    def cache_user_session(self, user_id: str, session_data: Dict[str, Any], ttl: Optional[int] = None) -> bool:
-        """缓存用户会话
-        
-        Args:
-            user_id: 用户ID
-            session_data: 会话数据
-            ttl: 生存时间（秒）
-            
-        Returns:
-            bool: 是否缓存成功
-        """
-        key = f"user_session:{user_id}"
-        return self.set(key, session_data, ttl)
-    
-    def get_user_session(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """获取用户会话
-        
-        Args:
-            user_id: 用户ID
-            
-        Returns:
-            会话数据或None
-        """
-        key = f"user_session:{user_id}"
-        return self.get(key)
-    
-    def invalidate_user_session(self, user_id: str) -> bool:
-        """使用户会话失效
-        
-        Args:
-            user_id: 用户ID
-            
-        Returns:
-            bool: 是否成功
-        """
-        key = f"user_session:{user_id}"
-        return self.delete(key)
-    
-    # 统计和监控缓存
-    def cache_operation_stats(self, operation: str, stats: Dict[str, Any], ttl: Optional[int] = None) -> bool:
-        """缓存操作统计
-        
-        Args:
-            operation: 操作名称
-            stats: 统计数据
-            ttl: 生存时间（秒）
-            
-        Returns:
-            bool: 是否缓存成功
-        """
-        key = f"stats:{operation}:{int(time.time() // 3600)}"  # 按小时分组
-        return self.set(key, stats, ttl)
-    
-    def get_operation_stats(self, operation: str, hours: int = 24) -> List[Dict[str, Any]]:
-        """获取操作统计
-        
-        Args:
-            operation: 操作名称
-            hours: 获取多少小时的数据
-            
-        Returns:
-            统计数据列表
-        """
-        try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return []
-            
-            current_hour = int(time.time() // 3600)
-            stats = []
-            
-            for i in range(hours):
-                hour = current_hour - i
-                key = f"stats:{operation}:{hour}"
-                stat = self.get(key)
-                if stat:
-                    stat['hour'] = hour
-                    stats.append(stat)
+            # Redis统计
+            if self.redis_service and self.redis_service.is_connected():
+                try:
+                    stats['redis_cache']['connected'] = True
+                    # 这里可以添加更多Redis统计信息
+                except Exception:
+                    pass
             
             return stats
-        except Exception as e:
-            logger.error(f"获取操作统计失败: {e}")
-            return []
-    
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """获取缓存统计信息
-        
-        Returns:
-            缓存统计信息
-        """
-        try:
-            redis_service = self._get_redis_service()
-            if not redis_service or not redis_service.is_connected():
-                return {'connected': False}
             
-            info = redis_service.info()
-            keys = redis_service.keys(f"{self.cache_prefix}*")
-            
-            return {
-                'connected': True,
-                'total_keys': len(keys),
-                'memory_usage': info.get('used_memory_human', 'unknown'),
-                'connected_clients': info.get('connected_clients', 0),
-                'uptime': info.get('uptime_in_seconds', 0)
-            }
         except Exception as e:
             logger.error(f"获取缓存统计失败: {e}")
-            return {'connected': False, 'error': str(e)}
+            return {}
+    
+    def cleanup_expired(self) -> int:
+        """清理过期缓存"""
+        try:
+            current_time = time.time()
+            expired_keys = [k for k, v in self.memory_cache.items() 
+                          if current_time >= v['expires_at']]
+            
+            for key in expired_keys:
+                del self.memory_cache[key]
+            
+            logger.info(f"清理过期缓存完成，共清理 {len(expired_keys)} 个")
+            return len(expired_keys)
+            
+        except Exception as e:
+            logger.error(f"清理过期缓存失败: {e}")
+            return 0
 
 # 全局缓存服务实例
 _cache_service = None
 
 def get_cache_service() -> CacheService:
-    """获取全局缓存服务实例"""
+    """获取缓存服务实例"""
     global _cache_service
     if _cache_service is None:
         _cache_service = CacheService()
     return _cache_service
+
+def clear_cache_service():
+    """清理缓存服务实例"""
+    global _cache_service
+    if _cache_service:
+        _cache_service = None
