@@ -171,9 +171,17 @@ class MySQLService:
                     logger.info(f"参数: {params}")
                     
                     affected_rows = cursor.execute(sql, params)
-                    conn.commit()
-                    logger.info(f"执行更新成功: {sql}, 参数: {params}, 影响行数: {affected_rows}")
-                    return affected_rows
+                    
+                    # 如果是INSERT语句，获取插入后的主键ID
+                    if sql.strip().upper().startswith('INSERT'):
+                        last_insert_id = cursor.lastrowid
+                        conn.commit()
+                        logger.info(f"执行插入成功: {sql}, 参数: {params}, 影响行数: {affected_rows}, 插入ID: {last_insert_id}")
+                        return last_insert_id
+                    else:
+                        conn.commit()
+                        logger.info(f"执行更新成功: {sql}, 参数: {params}, 影响行数: {affected_rows}")
+                        return affected_rows
                 except Exception as e:
                     conn.rollback()
                     logger.error(f"更新执行失败: {sql}, 参数: {params}, 错误: {e}")
@@ -221,6 +229,10 @@ class MySQLService:
             # 系统配置表
             if not self.table_exists('system_configs'):
                 self._create_system_configs_table()
+            
+            # 用户表
+            if not self.table_exists('users'):
+                self._create_users_table()
             
             logger.info("数据库表创建完成")
         except Exception as e:
@@ -600,6 +612,100 @@ class MySQLService:
                 pass
         self.connection_pool.clear()
         logger.info("所有MySQL连接已关闭")
+    
+    def _create_users_table(self):
+        """创建用户表"""
+        sql = """
+        CREATE TABLE IF NOT EXISTS users (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            role ENUM('user', 'admin') DEFAULT 'user',
+            status ENUM('active', 'inactive', 'banned') DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_login DATETIME NULL,
+            INDEX idx_email (email),
+            INDEX idx_status (status),
+            INDEX idx_role (role),
+            UNIQUE KEY uk_email (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+        self.execute_update(sql)
+        logger.info("用户表创建成功")
+    
+    def user_exists(self, email: str) -> bool:
+        """检查用户是否存在"""
+        sql = "SELECT COUNT(*) as count FROM users WHERE email = %s"
+        try:
+            result = self.execute_query(sql, (email,))
+            return result[0]['count'] > 0 if result else False
+        except Exception as e:
+            logger.error(f"检查用户是否存在失败: {email}, 错误: {e}")
+            return False
+    
+    def create_user(self, user_data: Dict[str, Any]) -> Optional[int]:
+        """创建用户"""
+        sql = """
+        INSERT INTO users (email, password_hash, role, status, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        try:
+            user_id = self.execute_update(sql, (
+                user_data['email'],
+                user_data['password_hash'],
+                user_data.get('role', 'user'),
+                user_data.get('status', 'active'),
+                user_data['created_at']
+            ))
+            logger.info(f"用户创建成功: {user_data['email']}, 用户ID: {user_id}")
+            return user_id
+        except Exception as e:
+            logger.error(f"创建用户失败: {user_data['email']}, 错误: {e}")
+            return None
+    
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """根据邮箱获取用户信息"""
+        sql = "SELECT * FROM users WHERE email = %s"
+        try:
+            result = self.execute_query(sql, (email,))
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"根据邮箱获取用户信息失败: {email}, 错误: {e}")
+            return None
+    
+    def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """根据ID获取用户信息"""
+        sql = "SELECT * FROM users WHERE id = %s"
+        try:
+            result = self.execute_query(sql, (user_id,))
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"根据ID获取用户信息失败: {user_id}, 错误: {e}")
+            return None
+    
+    def update_user_last_login(self, user_id: int) -> bool:
+        """更新用户最后登录时间"""
+        sql = "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s"
+        try:
+            affected_rows = self.execute_update(sql, (user_id,))
+            return affected_rows > 0
+        except Exception as e:
+            logger.error(f"更新用户最后登录时间失败: {user_id}, 错误: {e}")
+            return False
+    
+    def get_current_time(self):
+        """获取当前数据库时间"""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT NOW() as current_time")
+                    result = cursor.fetchone()
+                    return result['current_time']
+        except Exception as e:
+            logger.error(f"获取数据库当前时间失败: {e}")
+            # 如果数据库时间获取失败，返回Python当前时间
+            from datetime import datetime
+            return datetime.now()
 
 # 全局MySQL服务实例
 _mysql_service = None

@@ -13,9 +13,9 @@
 
 - **📁 文件管理**: 智能浏览、多文件上传、安全下载、批量操作、实时预览
 - **✏️ 在线编辑**: CodeMirror编辑器，支持50+种编程语言，语法高亮
-- **🗄️ 数据存储**: MySQL数据库支持，文件信息持久化、操作日志记录、用户会话管理
+- **🗄️ 数据存储**: MySQL数据库支持，文件信息持久化、操作日志记录
 - **🔒 安全保护**: 文件验证、速率限制、恶意文件检测、日志审计
-- **⚡ 性能优化**: Redis缓存、MySQL连接池、本地化资源、连接池管理
+- **⚡ 性能优化**: Redis缓存、MySQL连接池、本地化资源
 
 ## 🚀 快速开始
 
@@ -23,7 +23,6 @@
 - **Python**: 3.7+
 - **MySQL**: 5.7+ (推荐8.0+)
 - **Redis**: 推荐安装（可选）
-- **浏览器**: 现代浏览器
 
 ### 安装启动
 ```bash
@@ -37,14 +36,12 @@ pip install -r requirements.txt
 # 3. 初始化MySQL数据库
 python scripts/init_database.py
 
-# 4. 启动Redis（可选）
-redis-server
-
-# 5. 启动服务
+# 4. 启动服务
 python main.py
 
 # 5. 访问系统
 # 浏览器访问: http://localhost:8888
+# 默认管理员: admin@system.local / Asdasd123
 ```
 
 ## 🏗️ 项目结构
@@ -62,21 +59,6 @@ file_manager/
 └── config.yaml     # 配置文件
 ```
 
-## ⚙️ 配置说明
-
-主要配置在 `config.yaml` 文件中，支持环境变量覆盖：
-
-```bash
-export ENV=development
-export REDIS_HOST=localhost
-export ENABLE_PERFORMANCE_MONITORING=true
-```
-
-## 📚 相关文档
-
-- [快速部署](docs/DEPLOYMENT.md) - 快速部署指南
-- [技术指南](docs/TECHNICAL_GUIDE.md) - 完整的技术文档
-
 ## 🔧 主要功能
 
 ### 文件管理
@@ -91,11 +73,16 @@ export ENABLE_PERFORMANCE_MONITORING=true
 - 多主题支持
 - 实时保存
 
-### 系统监控
-- 健康检查端点 `/api/health`
-- 性能监控和统计
-- 缓存状态监控
-- 系统资源使用
+### 用户认证系统
+- 用户注册和登录
+- 邮箱验证码注册
+- 管理员账户管理
+- 权限控制和会话管理
+
+## 📚 相关文档
+
+- [部署指南](docs/DEPLOYMENT.md) - 快速部署说明
+- [技术指南](docs/TECHNICAL_GUIDE.md) - 完整技术文档
 
 ## 📄 许可证
 

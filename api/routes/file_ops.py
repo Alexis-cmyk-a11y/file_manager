@@ -9,6 +9,7 @@ from flask_limiter.util import get_remote_address
 from services.file_service import FileService
 from services.security_service import SecurityService
 from utils.logger import get_logger
+from utils.auth_middleware import require_auth_api, get_current_user
 
 logger = get_logger(__name__)
 bp = Blueprint('file_ops', __name__, url_prefix='/api')
@@ -20,6 +21,7 @@ def get_user_info():
     return user_ip, user_agent
 
 @bp.route('/list', methods=['GET'])
+@require_auth_api
 def list_directory():
     """列出目录内容"""
     try:
@@ -27,7 +29,12 @@ def list_directory():
         # 处理前端传递的空字符串
         if directory_path == '':
             directory_path = '.'
+        
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 列出目录: {directory_path}")
         
         file_service = FileService()
         result = file_service.list_directory(directory_path, user_ip, user_agent)
@@ -42,6 +49,7 @@ def list_directory():
         }), 500
 
 @bp.route('/info', methods=['GET'])
+@require_auth_api
 def get_file_info():
     """获取文件信息"""
     try:
@@ -52,7 +60,11 @@ def get_file_info():
                 'message': '文件路径不能为空'
             }), 400
         
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 获取文件信息: {file_path}")
         
         file_service = FileService()
         result = file_service.get_file_info(file_path, user_ip, user_agent)
@@ -67,6 +79,7 @@ def get_file_info():
         }), 500
 
 @bp.route('/create_folder', methods=['POST'])
+@require_auth_api
 def create_folder():
     """创建文件夹"""
     try:
@@ -86,9 +99,11 @@ def create_folder():
         else:
             directory_path = base_path + '/' + folder_name
         
-        logger.info(f"创建文件夹: base_path={base_path}, folder_name={folder_name}, full_path={directory_path}")
-        
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 创建文件夹: {directory_path}")
         
         file_service = FileService()
         result = file_service.create_directory(directory_path, user_ip, user_agent)
@@ -103,6 +118,7 @@ def create_folder():
         }), 500
 
 @bp.route('/delete', methods=['DELETE'])
+@require_auth_api
 def delete_file():
     """删除文件或目录"""
     try:
@@ -114,7 +130,11 @@ def delete_file():
             }), 400
         
         file_path = data['path']
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 删除文件/目录: {file_path}")
         
         file_service = FileService()
         result = file_service.delete_file(file_path, user_ip, user_agent)
@@ -129,6 +149,7 @@ def delete_file():
         }), 500
 
 @bp.route('/rename', methods=['PUT'])
+@require_auth_api
 def rename_file():
     """重命名文件或目录"""
     try:
@@ -141,7 +162,11 @@ def rename_file():
         
         old_path = data['old_path']
         new_name = data['new_name']
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 重命名文件/目录: {old_path} -> {new_name}")
         
         file_service = FileService()
         result = file_service.rename_file(old_path, new_name, user_ip, user_agent)
@@ -156,6 +181,7 @@ def rename_file():
         }), 500
 
 @bp.route('/move', methods=['PUT'])
+@require_auth_api
 def move_file():
     """移动文件或目录"""
     try:
@@ -168,7 +194,11 @@ def move_file():
         
         source_path = data['source_path']
         target_path = data['target_path']
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 移动文件/目录: {source_path} -> {target_path}")
         
         file_service = FileService()
         result = file_service.move_file(source_path, target_path, user_ip, user_agent)
@@ -183,6 +213,7 @@ def move_file():
         }), 500
 
 @bp.route('/copy', methods=['POST'])
+@require_auth_api
 def copy_file():
     """复制文件或目录"""
     try:
@@ -195,7 +226,11 @@ def copy_file():
         
         source_path = data['source_path']
         target_path = data['target_path']
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 复制文件/目录: {source_path} -> {target_path}")
         
         file_service = FileService()
         result = file_service.copy_file(source_path, target_path, user_ip, user_agent)
@@ -210,6 +245,7 @@ def copy_file():
         }), 500
 
 @bp.route('/search', methods=['GET'])
+@require_auth_api
 def search_files():
     """搜索文件"""
     try:
@@ -222,7 +258,11 @@ def search_files():
                 'message': '搜索查询不能为空'
             }), 400
         
+        # 获取当前用户信息
+        current_user = get_current_user()
         user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 搜索文件: {search_path}, 查询: {query}")
         
         file_service = FileService()
         result = file_service.search_files(search_path, query, user_ip, user_agent)

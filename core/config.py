@@ -15,7 +15,7 @@ class Config:
         # 根目录配置（使用当前目录）
         self.ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
-        # 从环境变量和配置文件加载配置
+        # 从配置文件加载配置
         self._load_environment_config()
         self._load_config_file()
         
@@ -23,157 +23,163 @@ class Config:
         self._validate_config()
     
     def _load_environment_config(self):
-        """从环境变量加载配置"""
+        """从配置文件加载配置（已移除环境变量依赖）"""
         # 文件大小限制
-        self.MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 10 * 1024 * 1024 * 1024))  # 1GB
-        self.MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 10 * 1024 * 1024 * 1024))  # 1GB单文件限制
+        self.MAX_CONTENT_LENGTH = 10 * 1024 * 1024 * 1024  # 1GB
+        self.MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024  # 1GB单文件限制
 
         # 文件类型控制
         # 允许上传的文件类型（设置为空集合表示允许所有类型）
         self.ALLOWED_EXTENSIONS = set()
         
         # 禁止的文件扩展名
-        forbidden_exts = os.getenv('FORBIDDEN_EXTENSIONS', '.com,.pif,.app')
-        self.FORBIDDEN_EXTENSIONS = set(ext.strip() for ext in forbidden_exts.split(',') if ext.strip())
+        self.FORBIDDEN_EXTENSIONS = {'.com', '.pif', '.app'}
         
         # 是否允许上传可执行文件
-        self.ALLOW_EXECUTABLE_FILES = os.getenv('ALLOW_EXECUTABLE_FILES', 'false').lower() == 'true'
+        self.ALLOW_EXECUTABLE_FILES = False
         
         # 日志配置
-        self.LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-        self.LOG_FORMAT = os.getenv('LOG_FORMAT', 'json')  # 支持 'json' 或传统格式
-        self.LOG_FILE = os.getenv('LOG_FILE', 'logs/file_manager.log')
-        self.LOG_MAX_SIZE = int(os.getenv('LOG_MAX_SIZE', 10 * 1024 * 1024))  # 10MB
-        self.LOG_BACKUP_COUNT = int(os.getenv('LOG_BACKUP_COUNT', 30))  # 保留30天的日志
+        self.LOG_LEVEL = 'INFO'
+        self.LOG_FORMAT = 'json'  # 支持 'json' 或传统格式
+        self.LOG_FILE = 'logs/file_manager.log'
+        self.LOG_MAX_SIZE = 10 * 1024 * 1024  # 10MB
+        self.LOG_BACKUP_COUNT = 30  # 保留30天的日志
         
         # 高级日志配置
-        self.LOG_ENABLE_CONSOLE = os.getenv('LOG_ENABLE_CONSOLE', 'true').lower() == 'true'
-        self.LOG_ENABLE_FILE = os.getenv('LOG_ENABLE_FILE', 'true').lower() == 'true'
-        self.LOG_ENABLE_JSON = os.getenv('LOG_ENABLE_JSON', 'true').lower() == 'true'
-        self.LOG_ENABLE_COLOR = os.getenv('LOG_ENABLE_COLOR', 'true').lower() == 'true'
-        self.LOG_ROTATION_WHEN = os.getenv('LOG_ROTATION_WHEN', 'midnight')  # midnight, hour, day
-        self.LOG_ROTATION_INTERVAL = int(os.getenv('LOG_ROTATION_INTERVAL', 1))
-        self.LOG_COMPRESS_OLD = os.getenv('LOG_COMPRESS_OLD', 'true').lower() == 'true'
+        self.LOG_ENABLE_CONSOLE = True
+        self.LOG_ENABLE_FILE = True
+        self.LOG_ENABLE_JSON = True
+        self.LOG_ENABLE_COLOR = True
+        self.LOG_ROTATION_WHEN = 'midnight'  # midnight, hour, day
+        self.LOG_ROTATION_INTERVAL = 1
+        self.LOG_COMPRESS_OLD = True
 
         # 界面配置
-        self.APP_NAME = os.getenv('APP_NAME', "文件管理系统")
-        self.THEME_COLOR = os.getenv('THEME_COLOR', "#4a6fa5")
-        self.SECONDARY_COLOR = os.getenv('SECONDARY_COLOR', "#6c8ebf")
+        self.APP_NAME = "文件管理系统"
+        self.THEME_COLOR = "#4a6fa5"
+        self.SECONDARY_COLOR = "#6c8ebf"
 
         # 安全配置
-        self.SECRET_KEY = os.getenv('SECRET_KEY', os.urandom(24).hex())
-        self.ENABLE_DOWNLOAD = os.getenv('ENABLE_DOWNLOAD', 'true').lower() == 'true'
-        self.ENABLE_DELETE = os.getenv('ENABLE_DELETE', 'true').lower() == 'true'
-        self.ENABLE_UPLOAD = os.getenv('ENABLE_UPLOAD', 'true').lower() == 'true'
-        self.ENABLE_CREATE_FOLDER = os.getenv('ENABLE_CREATE_FOLDER', 'true').lower() == 'true'
-        self.ENABLE_RENAME = os.getenv('ENABLE_RENAME', 'true').lower() == 'true'
-        self.ENABLE_MOVE_COPY = os.getenv('ENABLE_MOVE_COPY', 'true').lower() == 'true'
-        self.ENABLE_FILE_OPS = os.getenv('ENABLE_FILE_OPS', 'true').lower() == 'true'
+        self.SECRET_KEY = os.urandom(24).hex()
+        self.ENABLE_DOWNLOAD = True
+        self.ENABLE_DELETE = True
+        self.ENABLE_UPLOAD = True
+        self.ENABLE_CREATE_FOLDER = True
+        self.ENABLE_RENAME = True
+        self.ENABLE_MOVE_COPY = True
+        self.ENABLE_FILE_OPS = True
 
         # 安全限制
-        self.RATE_LIMIT = os.getenv('RATE_LIMIT', '100 per minute')  # 速率限制
-        self.SESSION_TIMEOUT = int(os.getenv('SESSION_TIMEOUT', 3600))  # 会话超时时间(秒)
+        self.RATE_LIMIT = '100 per minute'  # 速率限制
+        self.SESSION_TIMEOUT = 3600  # 会话超时时间(秒)
 
         # Flask服务器配置
-        self.SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')
-        self.SERVER_PORT = int(os.getenv('SERVER_PORT', 8888))
-        self.DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
-        self.TEMPLATES_AUTO_RELOAD = os.getenv('TEMPLATES_AUTO_RELOAD', 'false').lower() == 'true'
+        self.SERVER_HOST = '0.0.0.0'
+        self.SERVER_PORT = 8888
+        self.DEBUG_MODE = False
+        self.TEMPLATES_AUTO_RELOAD = False
 
         # 静态文件配置
-        self.STATIC_VERSION = os.getenv('STATIC_VERSION', '1.0.0')
-        self.SEND_FILE_MAX_AGE_DEFAULT = int(os.getenv('SEND_FILE_MAX_AGE_DEFAULT', 3600))
-        self.STATIC_COMPRESS = os.getenv('STATIC_COMPRESS', 'true').lower() == 'true'
+        self.STATIC_VERSION = '1.0.0'
+        self.SEND_FILE_MAX_AGE_DEFAULT = 3600
+        self.STATIC_COMPRESS = True
 
         # 前端资源配置
         self.FRONTEND_CONFIG = {
-            'app_name': os.getenv('FRONTEND_APP_NAME', '文件管理系统'),
-            'default_view': os.getenv('FRONTEND_DEFAULT_VIEW', 'list'),
-            'page_size': int(os.getenv('FRONTEND_PAGE_SIZE', 20)),
-            'show_hidden': os.getenv('FRONTEND_SHOW_HIDDEN', 'false').lower() == 'true',
-            'enable_drag_drop': os.getenv('FRONTEND_ENABLE_DRAG_DROP', 'true').lower() == 'true',
-            'enable_preview': os.getenv('FRONTEND_ENABLE_PREVIEW', 'true').lower() == 'true'
+            'app_name': '文件管理系统',
+            'default_view': 'list',
+            'page_size': 20,
+            'show_hidden': False,
+            'enable_drag_drop': True,
+            'enable_preview': True
         }
 
         # 细粒度权限控制
         self.PERMISSIONS = {
-            'upload': os.getenv('PERMISSION_UPLOAD', 'true').lower() == 'true',
-            'download': os.getenv('PERMISSION_DOWNLOAD', 'true').lower() == 'true',
-            'delete': os.getenv('PERMISSION_DELETE', 'true').lower() == 'true',
-            'rename': os.getenv('PERMISSION_RENAME', 'true').lower() == 'true',
-            'create_folder': os.getenv('PERMISSION_CREATE_FOLDER', 'true').lower() == 'true',
-            'admin_ops': os.getenv('PERMISSION_ADMIN_OPS', 'false').lower() == 'true'
+            'upload': True,
+            'download': True,
+            'delete': True,
+            'rename': True,
+            'create_folder': True,
+            'admin_ops': False
         }
 
         # 开发/生产环境配置
-        self.ENV = os.getenv('ENV', 'production')
+        self.ENV = 'production'
         
         # Redis配置
-        self.REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-        self.REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-        self.REDIS_DB = int(os.getenv('REDIS_DB', 0))
-        self.REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
-        self.REDIS_SSL = os.getenv('REDIS_SSL', 'false').lower() == 'true'
+        self.REDIS_HOST = 'localhost'
+        self.REDIS_PORT = 6379
+        self.REDIS_DB = 0
+        self.REDIS_PASSWORD = None
+        self.REDIS_SSL = False
+        
+        # Redis连接池配置
+        self.REDIS_CONNECTION_POOL_SIZE = 20
+        self.REDIS_SOCKET_TIMEOUT = 5
+        self.REDIS_SOCKET_CONNECT_TIMEOUT = 5
+        self.REDIS_RETRY_ON_TIMEOUT = True
+        self.REDIS_HEALTH_CHECK_INTERVAL = 30
         
         # 高级Redis配置
         self.REDIS_POOL_CONFIG = {
-            'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 20)),
-            'retry_on_timeout': os.getenv('REDIS_RETRY_ON_TIMEOUT', 'true').lower() == 'true',
-            'socket_keepalive': os.getenv('REDIS_SOCKET_KEEPALIVE', 'true').lower() == 'true',
-            'health_check_interval': int(os.getenv('REDIS_HEALTH_CHECK_INTERVAL', 30))
+            'max_connections': 20,
+            'retry_on_timeout': True,
+            'socket_keepalive': True,
+            'health_check_interval': 30
         }
         
         # MySQL配置
-        self.MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
-        self.MYSQL_PORT = int(os.getenv('MYSQL_PORT', 3306))
-        self.MYSQL_DATABASE = os.getenv('MYSQL_DATABASE', 'file_manager')
-        self.MYSQL_USERNAME = os.getenv('MYSQL_USERNAME', 'root')
-        self.MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', 'z6tsJw9NqvsDy6vZ')
-        self.MYSQL_CHARSET = os.getenv('MYSQL_CHARSET', 'utf8mb4')
+        self.MYSQL_HOST = 'localhost'
+        self.MYSQL_PORT = 3306
+        self.MYSQL_DATABASE = 'file_manager'
+        self.MYSQL_USERNAME = 'root'
+        self.MYSQL_PASSWORD = 'z6tsJw9NqvsDy6vZ'
+        self.MYSQL_CHARSET = 'utf8mb4'
         
         # MySQL连接池配置
         self.MYSQL_POOL_CONFIG = {
-            'max_connections': int(os.getenv('MYSQL_MAX_CONNECTIONS', 20)),
-            'min_connections': int(os.getenv('MYSQL_MIN_CONNECTIONS', 5)),
-            'pool_recycle': int(os.getenv('MYSQL_POOL_RECYCLE', 3600)),
-            'pool_pre_ping': os.getenv('MYSQL_POOL_PRE_PING', 'true').lower() == 'true',
-            'echo': os.getenv('MYSQL_ECHO', 'false').lower() == 'true'
+            'max_connections': 20,
+            'min_connections': 5,
+            'pool_recycle': 3600,
+            'pool_pre_ping': True,
+            'echo': False
         }
         
         # MySQL选项配置
         self.MYSQL_OPTIONS = {
-            'autocommit': os.getenv('MYSQL_AUTOCOMMIT', 'true').lower() == 'true',
-            'isolation_level': os.getenv('MYSQL_ISOLATION_LEVEL', 'READ_COMMITTED'),
-            'connect_timeout': int(os.getenv('MYSQL_CONNECT_TIMEOUT', 10)),
-            'read_timeout': int(os.getenv('MYSQL_READ_TIMEOUT', 30)),
-            'write_timeout': int(os.getenv('MYSQL_WRITE_TIMEOUT', 30))
+            'autocommit': True,
+            'isolation_level': 'READ_COMMITTED',
+            'connect_timeout': 10,
+            'read_timeout': 30,
+            'write_timeout': 30
         }
         
         # MySQL日志保留策略配置
         self.MYSQL_LOG_RETENTION = {
-            'enabled': os.getenv('MYSQL_LOG_RETENTION_ENABLED', 'true').lower() == 'true',
-            'retention_days': int(os.getenv('MYSQL_LOG_RETENTION_DAYS', 30)),
-            'auto_cleanup': os.getenv('MYSQL_LOG_AUTO_CLEANUP', 'true').lower() == 'true',
-            'cleanup_schedule': os.getenv('MYSQL_LOG_CLEANUP_SCHEDULE', '0 2 * * *'),
-            'optimize_schedule': os.getenv('MYSQL_LOG_OPTIMIZE_SCHEDULE', '0 3 * * 0'),
-            'max_records': int(os.getenv('MYSQL_LOG_MAX_RECORDS', 100000)),
-            'cleanup_batch_size': int(os.getenv('MYSQL_LOG_CLEANUP_BATCH_SIZE', 1000))
+            'enabled': True,
+            'retention_days': 30,
+            'auto_cleanup': True,
+            'cleanup_schedule': '0 2 * * *',
+            'optimize_schedule': '0 3 * * 0',
+            'max_records': 100000,
+            'cleanup_batch_size': 1000
         }
         
         # 缓存配置
-        self.CACHE_ENABLED = os.getenv('CACHE_ENABLED', 'true').lower() == 'true'
-        self.CACHE_DEFAULT_TTL = int(os.getenv('CACHE_DEFAULT_TTL', 300))  # 5分钟
-        self.CACHE_MAX_ITEMS = int(os.getenv('CACHE_MAX_ITEMS', 10000))
+        self.CACHE_ENABLED = True
+        self.CACHE_DEFAULT_TTL = 300  # 5分钟
+        self.CACHE_MAX_ITEMS = 10000
         
         # 性能配置
-        self.ENABLE_PERFORMANCE_MONITORING = os.getenv('ENABLE_PERFORMANCE_MONITORING', 'true').lower() == 'true'
-        self.PERFORMANCE_SLOW_THRESHOLD = float(os.getenv('PERFORMANCE_SLOW_THRESHOLD', 1.0))  # 秒
+        self.ENABLE_PERFORMANCE_MONITORING = True
+        self.PERFORMANCE_SLOW_THRESHOLD = 1.0  # 秒
         
         # 安全增强配置
-        self.ENABLE_SECURITY_LOGGING = os.getenv('ENABLE_SECURITY_LOGGING', 'true').lower() == 'true'
-        self.SECURITY_LOG_LEVEL = os.getenv('SECURITY_LOG_LEVEL', 'WARNING')
-        self.MAX_PATH_LENGTH = int(os.getenv('MAX_PATH_LENGTH', 4096))
-        self.ENABLE_FILE_TYPE_DETECTION = os.getenv('ENABLE_FILE_TYPE_DETECTION', 'true').lower() == 'true'
+        self.ENABLE_SECURITY_LOGGING = True
+        self.SECURITY_LOG_LEVEL = 'WARNING'
+        self.MAX_PATH_LENGTH = 4096
+        self.ENABLE_FILE_TYPE_DETECTION = True
     
     def _load_config_file(self):
         """从配置文件加载配置"""

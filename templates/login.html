@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录 - 文件管理系统</title>
+    <!-- 角标设置 -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/local-fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-all.min.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .auth-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-header p {
+            color: #6b7280;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 1.8rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            background: #ffffff;
+            color: #1f2937;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .verification-section {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-radius: 16px;
+            border: 1px solid #bae6fd;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.3s ease;
+        }
+
+        .verification-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0ea5e9, #0284c7);
+        }
+
+        .verification-section.show {
+            display: block;
+        }
+
+        .verification-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .verification-row input {
+            flex: 1;
+        }
+
+        .verification-row button {
+            white-space: nowrap;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .verification-row button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+
+        .verification-row button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .auth-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .auth-links a:hover {
+            color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .error-message, .success-message {
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            color: #059669;
+            border: 1px solid #bbf7d0;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .floating-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .shape:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            top: 60%;
+            right: 10%;
+            animation-delay: 2s;
+        }
+
+        .shape:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        @media (max-width: 640px) {
+            .auth-container {
+                padding: 2rem;
+                margin: 1rem;
+                border-radius: 20px;
+            }
+            
+            .auth-header h1 {
+                font-size: 2rem;
+            }
+            
+            .verification-row {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .verification-row button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1><i class="fas fa-sign-in-alt"></i> 欢迎回来</h1>
+            <p>登录您的账户</p>
+        </div>
+        
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">
+                    <i class="fas fa-envelope"></i> 邮箱地址
+                </label>
+                <input type="email" id="email" name="email" required placeholder="请输入您的邮箱地址">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i> 密码
+                </label>
+                <input type="password" id="password" name="password" required placeholder="请输入密码">
+            </div>
+            
+            <div id="verificationSection" class="verification-section">
+                <label>
+                    <i class="fas fa-shield-alt"></i> 邮箱验证
+                </label>
+                <div class="verification-row">
+                    <input type="text" id="verificationCode" name="verificationCode" placeholder="请输入6位验证码" maxlength="6">
+                    <button type="button" id="sendCodeBtn">
+                        <i class="fas fa-paper-plane"></i> 发送验证码
+                    </button>
+                </div>
+                <small style="color: #6b7280; margin-top: 0.75rem; display: block; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> 验证码将发送到您的邮箱，5分钟内有效
+                </small>
+            </div>
+            
+            <button type="submit" id="loginBtn" class="btn-primary">
+                <span id="loginBtnText">
+                    <i class="fas fa-sign-in-alt"></i> 立即登录
+                </span>
+            </button>
+        </form>
+        
+        <div class="auth-links">
+            <a href="/register">
+                <i class="fas fa-user-plus"></i> 还没有账户？立即注册
+            </a>
+        </div>
+    </div>
+
+    <script>
+        class LoginManager {
+            constructor() {
+                this.form = document.getElementById('loginForm');
+                this.emailInput = document.getElementById('email');
+                this.passwordInput = document.getElementById('password');
+                this.verificationCodeInput = document.getElementById('verificationCode');
+                this.verificationSection = document.getElementById('verificationSection');
+                this.sendCodeBtn = document.getElementById('sendCodeBtn');
+                this.loginBtn = document.getElementById('loginBtn');
+                this.loginBtnText = document.getElementById('loginBtnText');
+                
+                this.bindEvents();
+            }
+            
+            bindEvents() {
+                this.form.addEventListener('submit', (e) => this.handleLogin(e));
+                this.sendCodeBtn.addEventListener('click', () => this.sendVerificationCode());
+            }
+            
+            showMessage(message, type = 'error') {
+                const errorDiv = document.getElementById('errorMessage');
+                const successDiv = document.getElementById('successMessage');
+                
+                if (type === 'error') {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                    successDiv.style.display = 'none';
+                } else {
+                    successDiv.textContent = message;
+                    successDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                }
+            }
+            
+            hideMessages() {
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'none';
+            }
+            
+            setLoading(loading) {
+                if (loading) {
+                    this.loginBtn.disabled = true;
+                    this.loginBtnText.innerHTML = '<span class="spinner"></span>登录中...';
+                    this.form.classList.add('loading');
+                } else {
+                    this.loginBtn.disabled = false;
+                    this.loginBtnText.innerHTML = '<i class="fas fa-sign-in-alt"></i> 立即登录';
+                    this.form.classList.remove('loading');
+                }
+            }
+            
+            async sendVerificationCode() {
+                const email = this.emailInput.value.trim();
+                if (!email) {
+                    this.showMessage('请先输入邮箱地址');
+                    return;
+                }
+                
+                this.sendCodeBtn.disabled = true;
+                this.sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+                
+                try {
+                    const response = await fetch('/api/auth/send-code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            purpose: 'login'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showMessage(data.message, 'success');
+                        this.startCodeCountdown();
+                    } else {
+                        this.showMessage(data.message);
+                    }
+                } catch (error) {
+                    this.showMessage('发送验证码失败，请稍后重试');
+                } finally {
+                    this.sendCodeBtn.disabled = false;
+                    this.sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发送验证码';
+                }
+            }
+            
+            startCodeCountdown() {
+                let countdown = 180; // 3分钟
+                const originalText = '<i class="fas fa-paper-plane"></i> 发送验证码';
+                
+                const timer = setInterval(() => {
+                    if (countdown > 0) {
+                        this.sendCodeBtn.innerHTML = `<i class="fas fa-clock"></i> ${countdown}秒后重试`;
+                        countdown--;
+                    } else {
+                        this.sendCodeBtn.innerHTML = originalText;
+                        this.sendCodeBtn.disabled = false;
+                        clearInterval(timer);
+                    }
+                }, 1000);
+                
+                this.sendCodeBtn.disabled = true;
+            }
+            
+            async handleLogin(e) {
+                e.preventDefault();
+                
+                const email = this.emailInput.value.trim();
+                const password = this.passwordInput.value;
+                const verificationCode = this.verificationCodeInput.value.trim();
+                
+                if (!email || !password) {
+                    this.showMessage('请填写完整的登录信息');
+                    return;
+                }
+                
+                this.hideMessages();
+                this.setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password,
+                            verification_code: verificationCode || undefined
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showMessage('🎉 登录成功，正在跳转...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    } else {
+                        if (data.need_verification) {
+                            this.verificationSection.classList.add('show');
+                            this.verificationCodeInput.required = true;
+                            this.showMessage('您的账户需要验证码验证，请输入验证码');
+                        } else {
+                            this.showMessage(data.message);
+                        }
+                    }
+                } catch (error) {
+                    this.showMessage('登录失败，请稍后重试');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+        }
+        
+        // 初始化登录管理器
+        document.addEventListener('DOMContentLoaded', () => {
+            new LoginManager();
+        });
+    </script>
+</body>
+</html>

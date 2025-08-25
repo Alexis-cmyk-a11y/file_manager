@@ -106,6 +106,21 @@ class RedisService:
             logger.error(f"Redis SET操作失败: {e}")
             return False
     
+    def setex(self, key: str, time: int, value: Any) -> bool:
+        """设置键值对并指定过期时间"""
+        try:
+            client = self.get_client()
+            if client is None:
+                return False
+            
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False)
+            
+            return client.setex(key, time, value)
+        except Exception as e:
+            logger.error(f"Redis SETEX操作失败: {e}")
+            return False
+    
     def get(self, key: str, default: Any = None) -> Any:
         """获取键值"""
         try:
@@ -117,7 +132,12 @@ class RedisService:
             if value is None:
                 return default
             
-            # 尝试解析JSON
+            # 对于验证码等简单字符串，直接返回
+            # 只有在明确知道是JSON格式时才尝试解析
+            if key.startswith('verification:') or key.startswith('cooldown:'):
+                return value
+            
+            # 尝试解析JSON（用于其他复杂数据）
             try:
                 return json.loads(value)
             except:
@@ -173,6 +193,18 @@ class RedisService:
         except Exception as e:
             logger.error(f"Redis TTL操作失败: {e}")
             return -2
+    
+    def incr(self, key: str, amount: int = 1) -> int:
+        """增加键的值"""
+        try:
+            client = self.get_client()
+            if client is None:
+                return 0
+            
+            return client.incr(key, amount)
+        except Exception as e:
+            logger.error(f"Redis INCR操作失败: {e}")
+            return 0
     
     # 哈希操作
     def hset(self, name: str, key: str, value: Any) -> int:

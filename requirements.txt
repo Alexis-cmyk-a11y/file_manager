@@ -3,6 +3,10 @@ flask==3.0.0
 werkzeug==3.0.1
 flask-cors==4.0.0
 flask-limiter==3.5.0
+flask-session==0.5.0
+bcrypt==4.1.2
+tencentcloud-sdk-python==3.0.1035
+requests==2.31.0
 
 # Cache and database
 redis==5.0.1
@@ -22,5 +26,5 @@ python-magic==0.4.27
 memory-profiler==0.61.0
 
 # Development tools (optional)
-# python-dotenv==1.0.0  # Environment variable management
+# python-dotenv==1.0.0  # 已移除环境变量依赖，保留注释供参考
 # watchdog==0.0       # File system monitoring

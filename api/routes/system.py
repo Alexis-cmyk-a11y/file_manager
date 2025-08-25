@@ -12,6 +12,7 @@ from services.redis_service import get_redis_service
 from services.cache_service import get_cache_service
 from utils.performance_monitor import get_performance_monitor
 from utils.logger import get_logger
+from utils.auth_middleware import require_auth_api, require_admin, get_current_user
 
 bp = Blueprint('system', __name__, url_prefix='/api')
 
@@ -19,7 +20,7 @@ logger = get_logger(__name__)
 
 @bp.route('/health', methods=['GET'])
 def health_check():
-    """系统健康检查"""
+    """系统健康检查 - 公开端点，无需认证"""
     try:
         health_status = {
             'status': 'healthy',
@@ -106,45 +107,200 @@ def health_check():
                 'error': str(e)
             }
         
-        # 系统信息
+        # 检查系统性能
         try:
-            health_status['system'] = get_system_info()
+            performance_monitor = get_performance_monitor()
+            if performance_monitor:
+                perf_stats = performance_monitor.get_system_stats()
+                health_status['performance'] = perf_stats
+            else:
+                health_status['performance'] = {
+                    'status': 'unavailable',
+                    'message': '性能监控服务未初始化'
+                }
+        except Exception as e:
+            health_status['performance'] = {
+                'status': 'error',
+                'error': str(e)
+            }
+        
+        # 检查系统信息
+        try:
+            health_status['system'] = {
+                'platform': platform.system(),
+                'platform_version': platform.version(),
+                'python_version': platform.python_version(),
+                'processor': platform.processor(),
+                'hostname': platform.node()
+            }
         except Exception as e:
             health_status['system'] = {
                 'status': 'error',
                 'error': str(e)
             }
         
-        # 性能信息
-        try:
-            performance_monitor = get_performance_monitor()
-            health_status['performance'] = {
-                'status': 'healthy',
-                'monitoring_enabled': current_app.config.get('ENABLE_PERFORMANCE_MONITORING', True),
-                'total_functions': len(performance_monitor.get_all_stats()),
-                'slow_functions_count': len(performance_monitor.get_slow_functions())
-            }
-        except Exception as e:
-            health_status['performance'] = {
-                'status': 'error',
-                'error': str(e)
-            }
-        
         # 检查整体健康状态
-        all_healthy = all(
-            service.get('status') in ['healthy', 'unavailable'] 
+        all_services_healthy = all(
+            service.get('status') == 'healthy' 
             for service in health_status['services'].values()
         )
-        health_status['status'] = 'healthy' if all_healthy else 'degraded'
+        
+        health_status['overall_status'] = 'healthy' if all_services_healthy else 'degraded'
         
         return jsonify(health_status)
-    
+        
     except Exception as e:
-        logger.error(f"健康检查失败: {str(e)}")
+        logger.error(f"健康检查失败: {e}")
         return jsonify({
             'status': 'error',
             'timestamp': datetime.now().isoformat(),
             'error': str(e)
+        }), 500
+
+@bp.route('/system', methods=['GET'])
+@require_auth_api
+def get_system_info():
+    """获取系统信息 - 需要认证"""
+    try:
+        # 获取当前用户信息
+        current_user = get_current_user()
+        logger.info(f"用户 {current_user['email']} 查看系统信息")
+        
+        system_info = {
+            'timestamp': datetime.now().isoformat(),
+            'platform': {
+                'system': platform.system(),
+                'release': platform.release(),
+                'version': platform.version(),
+                'machine': platform.machine(),
+                'processor': platform.processor(),
+                'hostname': platform.node()
+            },
+            'python': {
+                'version': platform.python_version(),
+                'implementation': platform.python_implementation(),
+                'compiler': platform.python_compiler()
+            },
+            'cpu': {
+                'count': psutil.cpu_count(),
+                'count_logical': psutil.cpu_count(logical=True),
+                'usage_percent': psutil.cpu_percent(interval=1),
+                'frequency': psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None
+            },
+            'memory': {
+                'total': psutil.virtual_memory().total,
+                'available': psutil.virtual_memory().available,
+                'used': psutil.virtual_memory().used,
+                'percent': psutil.virtual_memory().percent
+            },
+            'disk': get_disk_usage('.')
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': system_info
+        })
+        
+    except Exception as e:
+        logger.error(f"获取系统信息失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/performance', methods=['GET'])
+@require_auth_api
+def get_performance_stats():
+    """获取性能统计 - 需要认证"""
+    try:
+        # 获取当前用户信息
+        current_user = get_current_user()
+        logger.info(f"用户 {current_user['email']} 查看性能统计")
+        
+        performance_monitor = get_performance_monitor()
+        if not performance_monitor:
+            return jsonify({
+                'success': False,
+                'message': '性能监控服务未初始化'
+            }), 503
+        
+        stats = performance_monitor.get_system_stats()
+        return jsonify({
+            'success': True,
+            'data': stats
+        })
+        
+    except Exception as e:
+        logger.error(f"获取性能统计失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/cache', methods=['GET'])
+@require_auth_api
+def get_cache_stats():
+    """获取缓存统计 - 需要认证"""
+    try:
+        # 获取当前用户信息
+        current_user = get_current_user()
+        logger.info(f"用户 {current_user['email']} 查看缓存统计")
+        
+        cache_service = get_cache_service()
+        stats = cache_service.get_stats()
+        
+        return jsonify({
+            'success': True,
+            'data': stats
+        })
+        
+    except Exception as e:
+        logger.error(f"获取缓存统计失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/logs', methods=['GET'])
+@require_admin
+def get_log_stats():
+    """获取日志统计 - 需要管理员权限"""
+    try:
+        # 获取当前用户信息
+        current_user = get_current_user()
+        logger.info(f"管理员 {current_user['email']} 查看日志统计")
+        
+        # 这里可以添加日志统计逻辑
+        log_stats = {
+            'timestamp': datetime.now().isoformat(),
+            'log_files': [],
+            'total_size': 0
+        }
+        
+        # 检查日志目录
+        log_dir = 'logs'
+        if os.path.exists(log_dir):
+            for file in os.listdir(log_dir):
+                if file.endswith('.log'):
+                    file_path = os.path.join(log_dir, file)
+                    file_size = os.path.getsize(file_path)
+                    log_stats['log_files'].append({
+                        'name': file,
+                        'size': file_size,
+                        'modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
+                    })
+                    log_stats['total_size'] += file_size
+        
+        return jsonify({
+            'success': True,
+            'data': log_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"获取日志统计失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
         }), 500
 
 @bp.route('/logs/retention', methods=['GET'])
@@ -313,30 +469,6 @@ def clear_cache():
         
     except Exception as e:
         logger.error(f"清理缓存失败: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/logs', methods=['GET'])
-def get_logs():
-    """获取最近的日志信息"""
-    try:
-        # 这里可以实现日志查询功能
-        # 目前返回基本信息
-        log_config = {
-            'log_level': current_app.config.get('LOG_LEVEL', 'INFO'),
-            'log_file': current_app.config.get('LOG_FILE', 'logs/file_manager.log'),
-            'log_format': current_app.config.get('LOG_FORMAT', 'json'),
-            'log_enable_console': current_app.config.get('LOG_ENABLE_CONSOLE', True),
-            'log_enable_file': current_app.config.get('LOG_ENABLE_FILE', True)
-        }
-        
-        return jsonify({
-            'timestamp': datetime.now().isoformat(),
-            'log_config': log_config,
-            'message': '日志查询功能待实现'
-        })
-        
-    except Exception as e:
-        logger.error(f"获取日志信息失败: {e}")
         return jsonify({'error': str(e)}), 500
 
 def get_system_info():

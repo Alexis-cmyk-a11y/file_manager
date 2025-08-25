@@ -1,5 +1,5 @@
 # 文件管理系统配置文件
-# 支持环境变量覆盖和多种配置格式
+# 配置文件，支持多种配置格式
 
 # 通用配置
 app_name: "文件管理系统"
@@ -9,7 +9,7 @@ version: "2.0.0"
 development:
   debug_mode: true
   log_level: DEBUG
-  server_host: "127.0.0.1"
+  server_host: "0.0.0.0"
   server_port: 8888
   
   # 开发环境允许更多调试信息

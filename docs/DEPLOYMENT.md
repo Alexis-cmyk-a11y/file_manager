@@ -20,10 +20,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. 配置数据库
-```bash
-# 编辑 config.yaml 文件
-# 修改 MySQL 连接信息
-```
+编辑 `config.yaml` 文件，修改MySQL连接信息
 
 ### 4. 初始化数据库
 ```bash
@@ -37,21 +34,6 @@ python main.py
 
 ### 6. 访问系统
 浏览器访问: http://localhost:8888
-
-## 🔧 环境配置
-
-### 开发环境
-```bash
-export ENV=development
-export REDIS_HOST=localhost
-```
-
-### 生产环境
-```bash
-export ENV=production
-export REDIS_HOST=your-redis-server
-export MYSQL_HOST=your-mysql-server
-```
 
 ## 📊 健康检查
 

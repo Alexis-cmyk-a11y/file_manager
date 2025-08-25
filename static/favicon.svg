@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 背景圆形 -->
+  <circle cx="16" cy="16" r="16" fill="url(#gradient-bg)"/>
+  
+  <!-- 文件图标主体 -->
+  <path d="M10 6h8l6 6v14H10V6z" fill="white" opacity="0.95"/>
+  
+  <!-- 文件折叠角 -->
+  <path d="M18 6l6 6h-4c-1.1 0-2-.9-2-2V6z" fill="url(#gradient-fold)"/>
+  
+  <!-- 文件内容线条 -->
+  <rect x="12" y="16" width="8" height="1.5" rx="0.75" fill="#6366f1" opacity="0.8"/>
+  <rect x="12" y="19" width="6" height="1.5" rx="0.75" fill="#6366f1" opacity="0.6"/>
+  <rect x="12" y="22" width="7" height="1.5" rx="0.75" fill="#6366f1" opacity="0.7"/>
+  
+  <!-- 装饰性圆点 -->
+  <circle cx="14" cy="13" r="1" fill="#6366f1" opacity="0.8"/>
+  <circle cx="18" cy="13" r="1" fill="#6366f1" opacity="0.6"/>
+  
+  <!-- 渐变定义 -->
+  <defs>
+    <!-- 背景渐变 -->
+    <linearGradient id="gradient-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 折叠角渐变 -->
+    <linearGradient id="gradient-fold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.9" />
+    </linearGradient>
+  </defs>
+</svg>

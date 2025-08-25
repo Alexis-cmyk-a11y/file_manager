@@ -9,6 +9,7 @@ from flask import Flask, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_session import Session
 
 from core.config import Config
 from utils.logger import setup_logging, get_logger
@@ -24,6 +25,16 @@ def create_app(config_class=Config):
     
     # 配置应用
     app.config.from_object(config_class())
+    
+    # 配置session
+    app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24小时
+    
+    # 确保session目录存在
+    session_dir = os.path.join(os.path.abspath('.'), 'flask_session')
+    if not os.path.exists(session_dir):
+        os.makedirs(session_dir)
     
     # 处理打包后的资源路径
     def resource_path(relative_path):
@@ -50,6 +61,9 @@ def create_app(config_class=Config):
     
     # 启用CORS
     CORS(app)
+    
+    # 初始化Flask-Session
+    Session(app)
     
     # 初始化速率限制器
     limiter = Limiter(
@@ -84,6 +98,17 @@ def create_app(config_class=Config):
             try:
                 mysql_service.create_tables()
                 app.logger.info("MySQL数据库表创建完成")
+                
+                # 创建管理员账户
+                try:
+                    from services.auth_service import get_auth_service
+                    auth_service = get_auth_service()
+                    if auth_service.create_admin_user():
+                        app.logger.info("管理员账户创建/检查完成")
+                    else:
+                        app.logger.warning("管理员账户创建失败")
+                except Exception as admin_error:
+                    app.logger.warning(f"管理员账户创建失败: {admin_error}")
                 
                 # 启动日志维护服务
                 try:
@@ -122,25 +147,102 @@ def create_app(config_class=Config):
 
 def register_blueprints(app):
     """注册蓝图"""
-    from api.routes import file_ops, upload, download, system, editor
+    from api.routes import file_ops, upload, download, system, editor, auth
     
     app.register_blueprint(file_ops.bp)
     app.register_blueprint(upload.bp)
     app.register_blueprint(download.bp)
     app.register_blueprint(system.bp)
     app.register_blueprint(editor.bp)
+    app.register_blueprint(auth.bp)
 
 def register_page_routes(app):
     """注册页面路由"""
+    from flask import session, redirect, url_for, request, render_template
+    
+    def require_auth(f):
+        """身份验证装饰器"""
+        from functools import wraps
+        
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            try:
+                if 'user_id' not in session:
+                    app.logger.info(f"未认证用户尝试访问: {request.path}")
+                    # 使用绝对URL进行重定向
+                    login_url = request.host_url.rstrip('/') + url_for('login_page')
+                    return redirect(login_url, code=302)
+                return f(*args, **kwargs)
+            except Exception as e:
+                app.logger.error(f"身份验证装饰器错误: {e}")
+                # 如果重定向失败，返回错误页面
+                return render_template('error.html', error='身份验证失败，请重新登录'), 401
+        return decorated_function
+    
     @app.route('/')
+    @require_auth
     def index():
-        """主页 - 文件管理器"""
+        """主页 - 文件管理器（需要登录）"""
+        app.logger.info(f"用户访问首页，session: {dict(session)}")
         return render_template('index.html')
     
     @app.route('/editor')
+    @require_auth
     def editor_page():
-        """编辑器页面"""
+        """编辑器页面（需要登录）"""
         return render_template('editor.html')
+    
+    @app.route('/login')
+    def login_page():
+        """登录页面"""
+        return render_template('login.html')
+    
+    @app.route('/register')
+    def register_page():
+        """注册页面"""
+        return render_template('register.html')
+    
+    @app.route('/logout')
+    def logout():
+        """登出功能"""
+        try:
+            # 记录登出信息
+            user_email = session.get('email', 'unknown')
+            app.logger.info(f"用户登出: {user_email}")
+            
+            # 清除session
+            session.clear()
+            
+            # 使用绝对URL进行重定向，避免相对路径问题
+            login_url = request.host_url.rstrip('/') + url_for('login_page')
+            app.logger.info(f"重定向到登录页面: {login_url}")
+            
+            return redirect(login_url, code=302)
+            
+        except Exception as e:
+            app.logger.error(f"登出过程中发生错误: {e}")
+            # 如果重定向失败，返回JSON响应
+            return {'success': False, 'message': '登出失败，请手动访问登录页面'}, 500
+    
+    @app.route('/health')
+    def health_check():
+        """健康检查端点（无需认证）"""
+        return {'status': 'healthy', 'message': '文件管理系统运行正常'}
+    
+    @app.route('/debug-session')
+    def debug_session():
+        """调试session信息（无需认证）"""
+        return {
+            'session_data': dict(session),
+            'session_type': app.config.get('SESSION_TYPE'),
+            'secret_key_set': bool(app.config.get('SECRET_KEY')),
+            'session_dir': os.path.join(os.path.abspath('.'), 'flask_session')
+        }
+    
+    @app.route('/test-api')
+    def test_api():
+        """API测试页面"""
+        return render_template('test_api.html')
     
     @app.route('/LICENSE')
     def license_file():

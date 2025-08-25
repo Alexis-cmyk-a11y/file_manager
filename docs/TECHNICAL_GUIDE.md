@@ -2,7 +2,7 @@
 
 ## 📋 概述
 
-本文档提供文件管理系统的完整技术指南，包括数据库设置、缓存配置、性能优化和部署说明。
+本文档提供文件管理系统的技术指南，包括数据库设置、缓存配置和性能优化。
 
 ## 🗄️ 数据库设置
 
@@ -45,18 +45,6 @@ mysql:
 #### 环境要求
 - **Redis**: 推荐安装（可选，用于缓存优化）
 - **Python依赖**: `redis==5.0.1`
-
-#### 快速安装
-```bash
-# Windows (使用Chocolatey)
-choco install redis-64
-
-# Linux (Ubuntu/Debian)
-sudo apt install redis-server
-
-# macOS
-brew install redis
-```
 
 #### 配置文件设置
 ```yaml
@@ -109,12 +97,11 @@ def your_function():
 
 ## 🔧 部署和配置
 
-### 环境变量
-```bash
-export ENV=development
-export REDIS_HOST=localhost
-export ENABLE_PERFORMANCE_MONITORING=true
-```
+### 配置文件
+项目使用配置文件进行配置管理：
+
+- `config.yaml` - 主配置文件
+- `config/tencent_cloud.py` - 腾讯云服务配置
 
 ### 健康检查
 ```bash
@@ -125,42 +112,6 @@ curl http://localhost:8888/api/health
 curl http://localhost:8888/api/cache/status
 ```
 
-### 日志管理
-```bash
-# 查看应用日志
-python scripts/log_manager.py
-
-# 维护日志
-python scripts/maintain_logs.py
-```
-
-## 🚨 故障排除
-
-### 常见问题
-
-#### MySQL连接失败
-```bash
-# 检查服务状态
-sudo systemctl status mysql
-
-# 检查端口
-netstat -tlnp | grep 3306
-```
-
-#### Redis连接失败
-```bash
-# 测试连接
-redis-cli ping
-
-# 检查端口
-netstat -an | grep 6379
-```
-
-#### 性能问题
-- 启用性能监控
-- 检查缓存命中率
-- 优化数据库查询
-
 ## 📊 监控端点
 
 | 端点 | 描述 |
@@ -168,13 +119,11 @@ netstat -an | grep 6379
 | `/api/health` | 系统健康检查 |
 | `/api/status` | 系统状态信息 |
 | `/api/cache/status` | 缓存状态 |
-| `/api/performance` | 性能指标 |
 
 ## 📚 相关资源
 
-- [项目主页](README.md)
-- [MySQL官方文档](https://dev.mysql.com/doc/)
-- [Redis官方文档](https://redis.io/documentation)
+- [项目主页](../README.md)
+- [部署指南](DEPLOYMENT.md)
 
 ---
 

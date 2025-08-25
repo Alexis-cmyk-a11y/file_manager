@@ -4,9 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件管理系统</title>
+    <!-- 角标设置 -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/local-fonts.css') }}">
+    <style>
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .header-left {
+            flex: 1;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .user-info i {
+            font-size: 1.2rem;
+            color: #667eea;
+        }
+        
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+        
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+            color: white;
+        }
+        
+        .logout-btn i {
+            font-size: 1rem;
+        }
+    </style>
 </head>
 <body>
     <!-- 加载指示器 -->
@@ -18,17 +77,30 @@
     <!-- 通知容器 -->
     <div id="notification-container"></div>
     
-    <div class="container">
-        <header>
+    <div class="container compact-container">
+        <header class="compact-header">
             <div class="header-content">
-                <h1>文件管理系统</h1>
-                <p class="header-subtitle">高效、安全、易用的文件管理解决方案</p>
+                <div class="header-left">
+                    <h1>文件管理系统</h1>
+                    <p class="header-subtitle">高效、安全、易用的文件管理解决方案</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="user-email">{{ session.email if session.email else '用户' }}</span>
+                    </div>
+                    <div class="user-actions">
+                        <button class="logout-btn" title="退出登录" onclick="handleLogout()">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
         <main>
             <div class="file-explorer">
-                <div class="breadcrumb-container">
+                <div class="breadcrumb-container compact-breadcrumb">
                     <div class="breadcrumb-header">
                         <i class="fas fa-folder-open"></i>
                         <span>当前位置</span>
@@ -38,13 +110,16 @@
                     </ol>
                 </div>
 
-                <div class="actions">
+                <div class="actions compact-actions">
                     <div class="action-group">
                         <button id="upload-btn" class="action-btn primary">
                             <i class="fas fa-upload"></i> 上传文件
                         </button>
                         <button id="new-folder-btn" class="action-btn secondary">
                             <i class="fas fa-folder-plus"></i> 新建文件夹
+                        </button>
+                        <button id="download-web-btn" class="action-btn secondary">
+                            <i class="fas fa-download"></i> 网络下载
                         </button>
                     </div>
                     <input type="file" id="file-upload" style="display: none;" multiple>
@@ -137,8 +212,212 @@
         </div>
     </div>
 
+    <!-- 网络下载模态框 -->
+    <div class="modal" id="web-download-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-download"></i> 网络文件下载</h3>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="web-download-url">下载链接</label>
+                <input type="url" id="web-download-url" placeholder="请输入要下载的文件链接 (http:// 或 https://)" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label for="web-download-filename">文件名 (可选)</label>
+                <input type="text" id="web-download-filename" placeholder="留空将自动从链接中提取文件名" autocomplete="off">
+            </div>
+            <div class="download-progress" id="download-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text">准备下载...</div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="start-download-btn" class="btn-primary">开始下载</button>
+            <button id="cancel-download-btn" class="btn-secondary">取消</button>
+        </div>
+    </div>
+
+    <!-- 下载文件列表模态框 -->
+    <div class="modal" id="downloaded-files-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-list"></i> 已下载文件</h3>
+        </div>
+        <div class="modal-body">
+            <div class="downloaded-files-list" id="downloaded-files-list">
+                <!-- 文件列表将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="refresh-files-btn" class="btn-secondary">刷新列表</button>
+            <button id="close-files-btn" class="btn-primary">关闭</button>
+        </div>
+    </div>
+
     <div class="overlay" id="overlay"></div>
 
             <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='3.0') }}"></script>
+            <script>
+                // 处理登出
+                async function handleLogout() {
+                    try {
+                        // 显示确认对话框
+                        if (!confirm('确定要退出登录吗？')) {
+                            return;
+                        }
+                        
+                        // 调用登出API
+                        const response = await fetch('/logout', {
+                            method: 'GET',
+                            credentials: 'same-origin'
+                        });
+                        
+                        if (response.ok) {
+                            // 登出成功，重定向到登录页面
+                            window.location.href = '/login';
+                        } else {
+                            // 如果API调用失败，直接重定向
+                            console.warn('登出API调用失败，直接重定向');
+                            window.location.href = '/login';
+                        }
+                    } catch (error) {
+                        console.error('登出过程中发生错误:', error);
+                        // 发生错误时，直接重定向到登录页面
+                        window.location.href = '/login';
+                    }
+                }
+                
+                // 页面加载完成后初始化
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('文件管理系统首页加载完成');
+                    initializeWebDownload();
+                });
+
+                // 初始化网络下载功能
+                function initializeWebDownload() {
+                    const downloadWebBtn = document.getElementById('download-web-btn');
+                    const webDownloadModal = document.getElementById('web-download-modal');
+                    const startDownloadBtn = document.getElementById('start-download-btn');
+                    const cancelDownloadBtn = document.getElementById('cancel-download-btn');
+                    const webDownloadUrl = document.getElementById('web-download-url');
+                    const webDownloadFilename = document.getElementById('web-download-filename');
+                    const downloadProgress = document.getElementById('download-progress');
+                    const progressFill = document.getElementById('progress-fill');
+                    const progressText = document.getElementById('progress-text');
+
+                    // 打开网络下载模态框
+                    downloadWebBtn.addEventListener('click', function() {
+                        webDownloadModal.style.display = 'block';
+                        document.getElementById('overlay').style.display = 'block';
+                        webDownloadUrl.focus();
+                    });
+
+                    // 取消下载
+                    cancelDownloadBtn.addEventListener('click', function() {
+                        webDownloadModal.style.display = 'none';
+                        document.getElementById('overlay').style.display = 'none';
+                        downloadProgress.style.display = 'none';
+                        webDownloadUrl.value = '';
+                        webDownloadFilename.value = '';
+                    });
+
+                    // 开始下载
+                    startDownloadBtn.addEventListener('click', async function() {
+                        const url = webDownloadUrl.value.trim();
+                        const filename = webDownloadFilename.value.trim();
+
+                        if (!url) {
+                            showNotification('请输入下载链接', 'error');
+                            return;
+                        }
+
+                        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                            showNotification('请输入有效的HTTP或HTTPS链接', 'error');
+                            return;
+                        }
+
+                        // 显示进度条
+                        downloadProgress.style.display = 'block';
+                        progressFill.style.width = '0%';
+                        progressText.textContent = '正在下载...';
+                        startDownloadBtn.disabled = true;
+
+                        try {
+                            const response = await fetch('/api/download_web_file', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    url: url,
+                                    filename: filename || ''
+                                })
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                showNotification(result.message, 'success');
+                                progressFill.style.width = '100%';
+                                progressText.textContent = '下载完成！';
+                                
+                                // 延迟关闭模态框
+                                setTimeout(() => {
+                                    webDownloadModal.style.display = 'none';
+                                    document.getElementById('overlay').style.display = 'none';
+                                    downloadProgress.style.display = 'none';
+                                    webDownloadUrl.value = '';
+                                    webDownloadFilename.value = '';
+                                    startDownloadBtn.disabled = false;
+                                }, 2000);
+                            } else {
+                                showNotification(result.message, 'error');
+                                progressText.textContent = '下载失败';
+                                startDownloadBtn.disabled = false;
+                            }
+                        } catch (error) {
+                            console.error('下载失败:', error);
+                            showNotification('下载过程中发生错误', 'error');
+                            progressText.textContent = '下载失败';
+                            startDownloadBtn.disabled = false;
+                        }
+                    });
+
+                    // 添加回车键支持
+                    webDownloadUrl.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            startDownloadBtn.click();
+                        }
+                    });
+
+                    webDownloadFilename.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            startDownloadBtn.click();
+                        }
+                    });
+                }
+
+                // 显示通知
+                function showNotification(message, type = 'info') {
+                    const container = document.getElementById('notification-container');
+                    const notification = document.createElement('div');
+                    notification.className = `notification ${type}`;
+                    notification.innerHTML = `
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.remove()">&times;</button>
+                    `;
+                    
+                    container.appendChild(notification);
+                    
+                    // 自动移除通知
+                    setTimeout(() => {
+                        if (notification.parentElement) {
+                            notification.remove();
+                        }
+                    }, 5000);
+                }
+            </script>
 </body>
 </html>
