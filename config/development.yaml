@@ -1,0 +1,78 @@
+# 开发环境配置文件
+# 继承主配置文件，可覆盖特定配置
+
+# 开发环境特定配置
+debug: true
+log_level: DEBUG
+
+# 服务器配置
+server:
+  host: "127.0.0.1"
+  port: 8888
+  workers: 1
+  timeout: 30
+
+# 功能开关
+features:
+  enable_performance_monitoring: true
+  enable_security_logging: true
+  enable_cache: true
+  enable_compression: true
+  enable_debug_toolbar: true
+
+# 限制配置
+limits:
+  max_file_size: 1073741824  # 1GB
+  max_upload_files: 100
+  max_path_length: 4096
+  max_concurrent_uploads: 5
+
+# 日志配置
+logging:
+  level: "DEBUG"
+  console:
+    enabled: true
+    colored: true
+  file_config:
+    enabled: true
+    rotation: "midnight"
+    compression: false  # 开发环境不压缩日志
+
+# 性能监控
+performance:
+  monitoring_enabled: true
+  slow_threshold: 0.5  # 开发环境降低阈值
+  profiling:
+    enabled: true
+    sample_rate: 1.0  # 开发环境全量采样
+
+# 前端配置
+frontend:
+  features:
+    enable_debug_mode: true
+    show_development_tools: true
+  editor:
+    enable_auto_save: false  # 开发环境关闭自动保存
+    show_line_numbers: true
+    enable_minimap: true
+
+# 缓存配置
+cache:
+  enabled: true
+  default_ttl: 60  # 开发环境缩短缓存时间
+  redis:
+    enabled: false  # 开发环境可关闭Redis缓存
+
+# 安全配置
+security:
+  file_validation:
+    check_file_content: false  # 开发环境关闭内容检查
+  cors:
+    origins: ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+# 监控配置
+monitoring:
+  health_check:
+    interval: 10  # 开发环境更频繁的健康检查
+  metrics:
+    collection_interval: 30

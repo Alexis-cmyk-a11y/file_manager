@@ -1,341 +1,250 @@
 """
 文件管理系统配置模块
-提供应用的所有配置选项
+提供应用的所有配置选项，使用配置文件而不是环境变量
 """
 
 import os
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
+from core.config_manager import config_manager, ConfigManager
 
 class Config:
-    """应用配置类"""
+    """应用配置类 - 兼容旧版本的配置接口"""
     
     def __init__(self):
-        # 根目录配置（使用当前目录）
+        # 根目录配置
         self.ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
-        # 从配置文件加载配置
-        self._load_environment_config()
-        self._load_config_file()
+        # 使用新的配置管理器
+        self.config_manager = config_manager
+        
+        # 加载配置
+        self._load_config()
         
         # 验证配置
         self._validate_config()
     
-    def _load_environment_config(self):
-        """从配置文件加载配置（已移除环境变量依赖）"""
-        # 文件大小限制
-        self.MAX_CONTENT_LENGTH = 10 * 1024 * 1024 * 1024  # 1GB
-        self.MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024  # 1GB单文件限制
-
-        # 文件类型控制
-        # 允许上传的文件类型（设置为空集合表示允许所有类型）
-        self.ALLOWED_EXTENSIONS = set()
+    def _load_config(self):
+        """从配置管理器加载配置"""
+        # 应用配置 - 从配置文件直接获取
+        self.APP_NAME = self.config_manager.get('app.name', '文件管理系统')
+        self.VERSION = self.config_manager.get('app.version', '2.0.0')
+        self.DESCRIPTION = self.config_manager.get('app.description', '现代化的文件管理系统')
         
-        # 禁止的文件扩展名
-        self.FORBIDDEN_EXTENSIONS = {'.com', '.pif', '.app'}
+        # 服务器配置
+        server_config = self.config_manager.get_server_config()
+        self.SERVER_HOST = server_config.host
+        self.SERVER_PORT = server_config.port
+        self.DEBUG_MODE = server_config.debug
         
-        # 是否允许上传可执行文件
-        self.ALLOW_EXECUTABLE_FILES = False
+        # 环境配置
+        env_config = self.config_manager.get_environment_config()
+        self.ENV = self.config_manager.environment
+        self.LOG_LEVEL = env_config.get('log_level', 'INFO')
+        
+        # 功能配置
+        features = env_config.get('features', {})
+        self.ENABLE_PERFORMANCE_MONITORING = features.get('enable_performance_monitoring', True)
+        self.ENABLE_SECURITY_LOGGING = features.get('enable_security_logging', True)
+        self.ENABLE_CACHE = features.get('enable_cache', True)
+        self.ENABLE_COMPRESSION = features.get('enable_compression', True)
+        
+        # 限制配置
+        limits = env_config.get('limits', {})
+        self.MAX_FILE_SIZE = limits.get('max_file_size', 1073741824)  # 1GB
+        self.MAX_UPLOAD_FILES = limits.get('max_upload_files', 100)
+        self.MAX_PATH_LENGTH = limits.get('max_path_length', 4096)
+        
+        # 数据库配置
+        db_config = self.config_manager.get_database_config()
+        mysql_config = db_config.mysql
+        self.MYSQL_HOST = mysql_config.get('host', 'localhost')
+        self.MYSQL_PORT = mysql_config.get('port', 3306)
+        self.MYSQL_DATABASE = mysql_config.get('database', 'file_manager')
+        self.MYSQL_USERNAME = mysql_config.get('username', 'root')
+        self.MYSQL_PASSWORD = mysql_config.get('password', '')
+        self.MYSQL_CHARSET = mysql_config.get('charset', 'utf8mb4')
+        self.MYSQL_POOL_CONFIG = mysql_config.get('pool', {})
+        self.MYSQL_OPTIONS = mysql_config.get('options', {})
+        self.MYSQL_LOG_RETENTION = mysql_config.get('maintenance', {})
+        
+        redis_config = db_config.redis
+        self.REDIS_HOST = redis_config.get('host', 'localhost')
+        self.REDIS_PORT = redis_config.get('port', 6379)
+        self.REDIS_DB = redis_config.get('db', 0)
+        self.REDIS_PASSWORD = redis_config.get('password')
+        self.REDIS_SSL = redis_config.get('ssl', False)
+        self.REDIS_POOL_CONFIG = redis_config.get('pool', {})
+        
+        # 安全配置
+        security_config = self.config_manager.get_security_config()
+        self.SECRET_KEY = security_config.secret_key or os.urandom(24).hex()
+        self.SESSION_TIMEOUT = security_config.session_timeout
+        self.RATE_LIMIT = security_config.rate_limit
+        self.JWT_EXPIRATION = security_config.jwt_expiration
+        self.PASSWORD_POLICY = security_config.password_policy
+        self.FILE_VALIDATION = security_config.file_validation
         
         # 日志配置
-        self.LOG_LEVEL = 'INFO'
-        self.LOG_FORMAT = 'json'  # 支持 'json' 或传统格式
-        self.LOG_FILE = 'logs/file_manager.log'
-        self.LOG_MAX_SIZE = 10 * 1024 * 1024  # 10MB
-        self.LOG_BACKUP_COUNT = 30  # 保留30天的日志
-        
-        # 高级日志配置
-        self.LOG_ENABLE_CONSOLE = True
-        self.LOG_ENABLE_FILE = True
-        self.LOG_ENABLE_JSON = True
-        self.LOG_ENABLE_COLOR = True
-        self.LOG_ROTATION_WHEN = 'midnight'  # midnight, hour, day
-        self.LOG_ROTATION_INTERVAL = 1
-        self.LOG_COMPRESS_OLD = True
-
-        # 界面配置
-        self.APP_NAME = "文件管理系统"
-        self.THEME_COLOR = "#4a6fa5"
-        self.SECONDARY_COLOR = "#6c8ebf"
-
-        # 安全配置
-        self.SECRET_KEY = os.urandom(24).hex()
-        self.ENABLE_DOWNLOAD = True
-        self.ENABLE_DELETE = True
-        self.ENABLE_UPLOAD = True
-        self.ENABLE_CREATE_FOLDER = True
-        self.ENABLE_RENAME = True
-        self.ENABLE_MOVE_COPY = True
-        self.ENABLE_FILE_OPS = True
-
-        # 安全限制
-        self.RATE_LIMIT = '100 per minute'  # 速率限制
-        self.SESSION_TIMEOUT = 3600  # 会话超时时间(秒)
-
-        # Flask服务器配置
-        self.SERVER_HOST = '0.0.0.0'
-        self.SERVER_PORT = 8888
-        self.DEBUG_MODE = False
-        self.TEMPLATES_AUTO_RELOAD = False
-
-        # 静态文件配置
-        self.STATIC_VERSION = '1.0.0'
-        self.SEND_FILE_MAX_AGE_DEFAULT = 3600
-        self.STATIC_COMPRESS = True
-
-        # 前端资源配置
-        self.FRONTEND_CONFIG = {
-            'app_name': '文件管理系统',
-            'default_view': 'list',
-            'page_size': 20,
-            'show_hidden': False,
-            'enable_drag_drop': True,
-            'enable_preview': True
-        }
-
-        # 细粒度权限控制
-        self.PERMISSIONS = {
-            'upload': True,
-            'download': True,
-            'delete': True,
-            'rename': True,
-            'create_folder': True,
-            'admin_ops': False
-        }
-
-        # 开发/生产环境配置
-        self.ENV = 'production'
-        
-        # Redis配置
-        self.REDIS_HOST = 'localhost'
-        self.REDIS_PORT = 6379
-        self.REDIS_DB = 0
-        self.REDIS_PASSWORD = None
-        self.REDIS_SSL = False
-        
-        # Redis连接池配置
-        self.REDIS_CONNECTION_POOL_SIZE = 20
-        self.REDIS_SOCKET_TIMEOUT = 5
-        self.REDIS_SOCKET_CONNECT_TIMEOUT = 5
-        self.REDIS_RETRY_ON_TIMEOUT = True
-        self.REDIS_HEALTH_CHECK_INTERVAL = 30
-        
-        # 高级Redis配置
-        self.REDIS_POOL_CONFIG = {
-            'max_connections': 20,
-            'retry_on_timeout': True,
-            'socket_keepalive': True,
-            'health_check_interval': 30
-        }
-        
-        # MySQL配置
-        self.MYSQL_HOST = 'localhost'
-        self.MYSQL_PORT = 3306
-        self.MYSQL_DATABASE = 'file_manager'
-        self.MYSQL_USERNAME = 'root'
-        self.MYSQL_PASSWORD = 'z6tsJw9NqvsDy6vZ'
-        self.MYSQL_CHARSET = 'utf8mb4'
-        
-        # MySQL连接池配置
-        self.MYSQL_POOL_CONFIG = {
-            'max_connections': 20,
-            'min_connections': 5,
-            'pool_recycle': 3600,
-            'pool_pre_ping': True,
-            'echo': False
-        }
-        
-        # MySQL选项配置
-        self.MYSQL_OPTIONS = {
-            'autocommit': True,
-            'isolation_level': 'READ_COMMITTED',
-            'connect_timeout': 10,
-            'read_timeout': 30,
-            'write_timeout': 30
-        }
-        
-        # MySQL日志保留策略配置
-        self.MYSQL_LOG_RETENTION = {
-            'enabled': True,
-            'retention_days': 30,
-            'auto_cleanup': True,
-            'cleanup_schedule': '0 2 * * *',
-            'optimize_schedule': '0 3 * * 0',
-            'max_records': 100000,
-            'cleanup_batch_size': 1000
-        }
+        logging_config = self.config_manager.get_logging_config()
+        self.LOG_LEVEL = logging_config.level
+        self.LOG_FORMAT = logging_config.format
+        self.LOG_FILE = logging_config.file
+        self.LOG_MAX_SIZE = logging_config.max_size
+        self.LOG_BACKUP_COUNT = logging_config.backup_count
+        self.LOG_ENABLE_CONSOLE = logging_config.console.get('enabled', True)
+        self.LOG_ENABLE_FILE = logging_config.file_config.get('enabled', True)
+        self.LOG_ENABLE_JSON = logging_config.json.get('enabled', True)
+        self.LOG_ENABLE_COLOR = logging_config.console.get('colored', True)
         
         # 缓存配置
-        self.CACHE_ENABLED = True
-        self.CACHE_DEFAULT_TTL = 300  # 5分钟
-        self.CACHE_MAX_ITEMS = 10000
+        cache_config = self.config_manager.get_cache_config()
+        self.CACHE_ENABLED = cache_config.enabled
+        self.CACHE_DEFAULT_TTL = cache_config.default_ttl
+        self.CACHE_MAX_ITEMS = cache_config.max_items
+        self.CACHE_STRATEGIES = cache_config.strategies
+        
+        # 前端配置
+        frontend_config = self.config_manager.get_frontend_config()
+        self.FRONTEND_CONFIG = {
+            'app_name': frontend_config.app_name,
+            'theme': frontend_config.theme,
+            'features': frontend_config.features,
+            'editor': frontend_config.editor,
+            'notifications': frontend_config.notifications
+        }
+        
+        # 文件系统配置
+        filesystem_config = self.config_manager.get_filesystem_config()
+        self.FILESYSTEM_ROOT = filesystem_config.root_directory or self.ROOT_DIR
+        self.UPLOAD_CONFIG = filesystem_config.upload
+        self.DOWNLOAD_CONFIG = filesystem_config.download
+        self.PREVIEW_CONFIG = filesystem_config.preview
         
         # 性能配置
-        self.ENABLE_PERFORMANCE_MONITORING = True
-        self.PERFORMANCE_SLOW_THRESHOLD = 1.0  # 秒
+        performance_config = self.config_manager.get_performance_config()
+        self.PERFORMANCE_MONITORING = performance_config.monitoring_enabled
+        self.SLOW_THRESHOLD = performance_config.slow_threshold
+        self.METRICS_RETENTION = performance_config.metrics_retention
         
-        # 安全增强配置
-        self.ENABLE_SECURITY_LOGGING = True
-        self.SECURITY_LOG_LEVEL = 'WARNING'
-        self.MAX_PATH_LENGTH = 4096
-        self.ENABLE_FILE_TYPE_DETECTION = True
-    
-    def _load_config_file(self):
-        """从配置文件加载配置"""
-        config_files = [
-            'config.yaml',
-            'config.yml',
-            'config.json',
-            os.path.expanduser('~/.file_manager/config.yaml'),
-            os.path.expanduser('~/.file_manager/config.yml'),
-            '/etc/file_manager/config.yaml',
-            '/etc/file_manager/config.yml'
-        ]
+        # 监控配置
+        monitoring_config = self.config_manager.get_monitoring_config()
+        self.HEALTH_CHECK_ENABLED = monitoring_config.health_check.get('enabled', True)
+        self.HEALTH_CHECK_INTERVAL = monitoring_config.health_check.get('interval', 30)
+        self.METRICS_ENABLED = monitoring_config.metrics.get('enabled', True)
+        self.ALERTS_ENABLED = monitoring_config.alerts.get('enabled', True)
         
-        for config_file in config_files:
-            if self._try_load_config_file(config_file):
-                break
-    
-    def _try_load_config_file(self, config_file: str) -> bool:
-        """尝试加载配置文件"""
-        try:
-            config_path = Path(config_file)
-            if not config_path.exists():
-                return False
-            
-            # 根据文件扩展名选择加载方式
-            if config_path.suffix in ['.yaml', '.yml']:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config_data = yaml.safe_load(f)
-            elif config_path.suffix == '.json':
-                import json
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
-            else:
-                return False
-            
-            # 应用配置文件中的设置
-            self._apply_config_data(config_data)
-            
-            print(f"✅ 已加载配置文件: {config_file}")
-            return True
-            
-        except Exception as e:
-            print(f"⚠️  加载配置文件失败: {config_file}, 错误: {e}")
-            return False
-    
-    def _apply_config_data(self, config_data: Dict[str, Any]):
-        """应用配置文件数据"""
-        if not config_data:
-            return
+        # 国际化配置
+        self.I18N_CONFIG = {
+            'default_language': self.config_manager.get('i18n.default_language', 'zh-CN'),
+            'supported_languages': self.config_manager.get('i18n.supported_languages', ['zh-CN', 'en-US']),
+            'timezone': self.config_manager.get('i18n.timezone', 'Asia/Shanghai')
+        }
         
-        # 环境特定配置
-        env = self.ENV
-        if env in config_data:
-            env_config = config_data[env]
-            self._apply_config_data(env_config)
+        # 备份配置
+        self.BACKUP_CONFIG = {
+            'enabled': self.config_manager.get('backup.enabled', False),
+            'schedule': self.config_manager.get('backup.schedule', '0 2 * * *'),
+            'retention': self.config_manager.get('backup.retention', 7)
+        }
         
-        # 应用通用配置
-        for key, value in config_data.items():
-            if hasattr(self, key):
-                # 对于复杂类型，需要特殊处理
-                if key == 'FRONTEND_CONFIG' and isinstance(value, dict):
-                    self.FRONTEND_CONFIG.update(value)
-                elif key == 'PERMISSIONS' and isinstance(value, dict):
-                    self.PERMISSIONS.update(value)
-                elif key == 'REDIS_POOL_CONFIG' and isinstance(value, dict):
-                    self.REDIS_POOL_CONFIG.update(value)
-                else:
-                    setattr(self, key, value)
-            
-            # 特殊处理安全配置
-            if key == 'security' and isinstance(value, dict):
-                self.SECURITY = value
+        # 邮件配置
+        self.EMAIL_CONFIG = {
+            'enabled': self.config_manager.get('email.enabled', False),
+            'smtp': self.config_manager.get('email.smtp', {}),
+            'templates': self.config_manager.get('email.templates', {})
+        }
     
     def _validate_config(self):
         """验证配置的有效性"""
-        errors = []
+        # 基本验证
+        if not self.SECRET_KEY:
+            raise ValueError("SECRET_KEY 不能为空")
         
-        # 验证端口范围
         if not (1 <= self.SERVER_PORT <= 65535):
-            errors.append(f"服务器端口必须在1-65535之间: {self.SERVER_PORT}")
+            raise ValueError(f"服务器端口必须在1-65535之间: {self.SERVER_PORT}")
         
-        # 验证文件大小限制
         if self.MAX_FILE_SIZE <= 0:
-            errors.append("文件大小限制必须大于0")
+            raise ValueError("最大文件大小必须大于0")
         
-        # 验证日志级别
-        valid_log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
-        if self.LOG_LEVEL not in valid_log_levels:
-            errors.append(f"无效的日志级别: {self.LOG_LEVEL}")
+        if self.MAX_PATH_LENGTH <= 0:
+            raise ValueError("最大路径长度必须大于0")
         
-        # 验证Redis配置
+        # 数据库配置验证
+        if not self.MYSQL_HOST:
+            raise ValueError("MySQL主机不能为空")
+        
+        if not (1 <= self.MYSQL_PORT <= 65535):
+            raise ValueError(f"MySQL端口必须在1-65535之间: {self.MYSQL_PORT}")
+        
+        if not self.MYSQL_DATABASE:
+            raise ValueError("MySQL数据库名不能为空")
+        
+        # Redis配置验证
+        if not self.REDIS_HOST:
+            raise ValueError("Redis主机不能为空")
+        
         if not (1 <= self.REDIS_PORT <= 65535):
-            errors.append(f"Redis端口必须在1-65535之间: {self.REDIS_PORT}")
-        
-        # 验证缓存配置
-        if self.CACHE_DEFAULT_TTL <= 0:
-            errors.append("缓存TTL必须大于0")
-        
-        # 如果有错误，抛出异常
-        if errors:
-            error_msg = "配置验证失败:\n" + "\n".join(f"  - {error}" for error in errors)
-            raise ValueError(error_msg)
+            raise ValueError(f"Redis端口必须在1-65535之间: {self.REDIS_PORT}")
     
-    def get(self, key: str, default: Any = None) -> Any:
-        """获取配置值"""
-        return getattr(self, key, default)
+    def get_database_url(self) -> str:
+        """获取数据库连接URL"""
+        password = f":{self.MYSQL_PASSWORD}@" if self.MYSQL_PASSWORD else "@"
+        return f"mysql+pymysql://{self.MYSQL_USERNAME}{password}{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}?charset={self.MYSQL_CHARSET}"
     
-    def set(self, key: str, value: Any):
-        """设置配置值"""
-        setattr(self, key, value)
+    def get_redis_url(self) -> str:
+        """获取Redis连接URL"""
+        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
+        protocol = "rediss://" if self.REDIS_SSL else "redis://"
+        return f"{protocol}{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
     
-    def to_dict(self) -> Dict[str, Any]:
-        """将配置转换为字典"""
-        config_dict = {}
-        for key in dir(self):
-            if not key.startswith('_') and not callable(getattr(self, key)):
-                value = getattr(self, key)
-                if not key.startswith('__'):
-                    config_dict[key] = value
-        return config_dict
+    def reload_config(self):
+        """重新加载配置"""
+        if self.config_manager.reload_config():
+            self._load_config()
+            self._validate_config()
+            return True
+        return False
     
-    def get_environment_info(self) -> Dict[str, Any]:
-        """获取环境信息"""
+    def get_config_summary(self) -> Dict[str, Any]:
+        """获取配置摘要"""
         return {
+            'app_name': self.APP_NAME,
+            'version': self.VERSION,
             'environment': self.ENV,
             'debug_mode': self.DEBUG_MODE,
-            'server_host': self.SERVER_HOST,
-            'server_port': self.SERVER_PORT,
-            'redis_connected': self.REDIS_HOST != 'localhost' or self.REDIS_PORT != 6379,
-            'cache_enabled': self.CACHE_ENABLED,
-            'performance_monitoring': self.ENABLE_PERFORMANCE_MONITORING,
-            'security_logging': self.ENABLE_SECURITY_LOGGING
+            'server': {
+                'host': self.SERVER_HOST,
+                'port': self.SERVER_PORT
+            },
+            'database': {
+                'mysql_host': self.MYSQL_HOST,
+                'mysql_port': self.MYSQL_PORT,
+                'mysql_database': self.MYSQL_DATABASE,
+                'redis_host': self.REDIS_HOST,
+                'redis_port': self.REDIS_PORT
+            },
+            'features': {
+                'performance_monitoring': self.ENABLE_PERFORMANCE_MONITORING,
+                'security_logging': self.ENABLE_SECURITY_LOGGING,
+                'cache': self.CACHE_ENABLED,
+                'compression': self.ENABLE_COMPRESSION
+            },
+            'limits': {
+                'max_file_size': self.MAX_FILE_SIZE,
+                'max_upload_files': self.MAX_UPLOAD_FILES,
+                'max_path_length': self.MAX_PATH_LENGTH
+            }
         }
     
-    def reload(self):
-        """重新加载配置"""
-        self._load_environment_config()
-        self._load_config_file()
-        self._validate_config()
-        print("✅ 配置已重新加载")
+    def export_config(self, format: str = 'json') -> str:
+        """导出配置"""
+        return self.config_manager.export_config(format)
     
-    def print_config_summary(self):
-        """打印配置摘要"""
-        print("\n📋 配置摘要:")
-        print(f"   🌍 环境: {self.ENV}")
-        print(f"   🚀 服务器: {self.SERVER_HOST}:{self.SERVER_PORT}")
-        print(f"   🐛 调试模式: {'开启' if self.DEBUG_MODE else '关闭'}")
-        print(f"   💾 Redis: {self.REDIS_HOST}:{self.REDIS_PORT}")
-        print(f"   📁 根目录: {self.ROOT_DIR}")
-        print(f"   📏 最大文件大小: {self.MAX_FILE_SIZE / (1024*1024*1024):.1f}GB")
-        print(f"   🔒 安全日志: {'开启' if self.ENABLE_SECURITY_LOGGING else '关闭'}")
-        print(f"   📊 性能监控: {'开启' if self.ENABLE_PERFORMANCE_MONITORING else '关闭'}")
-        print()
+    def validate_config_file(self, config_file: str) -> bool:
+        """验证配置文件"""
+        return self.config_manager.validate_config_file(config_file)
 
-# 创建默认配置实例
+# 创建全局配置实例
 config = Config()
-
-# 导出配置类
-__all__ = ['Config', 'config']

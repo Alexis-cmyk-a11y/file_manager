@@ -238,16 +238,7 @@ class UploadService:
                     'error': f'文件大小超过限制: {file.content_length} > {max_size}'
                 }
             
-            # 检查文件扩展名
-            filename = file.filename.lower()
-            forbidden_extensions = self.config.FORBIDDEN_EXTENSIONS
-            
-            for ext in forbidden_extensions:
-                if filename.endswith(ext.lower()):
-                    return {
-                        'valid': False,
-                        'error': f'不允许上传的文件类型: {ext}'
-                    }
+            # 移除文件扩展名检查，允许所有文件类型上传
             
             return {
                 'valid': True,

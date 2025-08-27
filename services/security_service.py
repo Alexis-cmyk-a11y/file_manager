@@ -208,21 +208,15 @@ class SecurityService:
             Tuple[bool, str]: (是否安全, 错误信息或MIME类型)
         """
         try:
-            # 1. 扩展名检查
-            _, ext = os.path.splitext(file_path.lower())
+            # 移除扩展名检查，允许所有文件类型
             
-            # 检查禁止的扩展名
-            if ext in self.config.FORBIDDEN_EXTENSIONS:
-                logger.warning(f"检测到禁止的文件类型: {ext}")
-                return False, f"文件类型 {ext} 不被允许"
-            
-            # 2. MIME类型检查
+            # MIME类型检查（可选）
             if mime_type:
                 if not self._validate_mime_type(mime_type):
                     return False, f"MIME类型 {mime_type} 不被允许"
                 return True, mime_type
             
-            # 3. 基于扩展名的MIME类型推断
+            # 基于扩展名的MIME类型推断
             inferred_mime_type = mimetypes.guess_type(file_path)[0]
             if inferred_mime_type and not self._validate_mime_type(inferred_mime_type):
                 return False, f"推断的MIME类型 {inferred_mime_type} 不被允许"

@@ -1,0 +1,92 @@
+# 生产环境配置文件
+# 继承主配置文件，可覆盖特定配置
+
+# 生产环境特定配置
+debug: false
+log_level: WARNING
+
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8888
+  workers: 4
+  timeout: 60
+
+# 功能开关
+features:
+  enable_performance_monitoring: true
+  enable_security_logging: true
+  enable_cache: true
+  enable_compression: true
+  enable_debug_toolbar: false
+
+# 限制配置
+limits:
+  max_file_size: 10737418240  # 10GB
+  max_upload_files: 100
+  max_path_length: 4096
+  max_concurrent_uploads: 10
+
+# 日志配置
+logging:
+  level: "WARNING"
+  console:
+    enabled: false  # 生产环境关闭控制台日志
+    colored: false
+  file_config:
+    enabled: true
+    rotation: "midnight"
+    compression: true
+  performance:
+    enabled: true
+    slow_threshold: 2.0  # 生产环境提高阈值
+
+# 性能监控
+performance:
+  monitoring_enabled: true
+  slow_threshold: 2.0
+  profiling:
+    enabled: false  # 生产环境关闭性能分析
+    sample_rate: 0.01
+
+# 前端配置
+frontend:
+  features:
+    enable_debug_mode: false
+    show_development_tools: false
+  editor:
+    enable_auto_save: true
+    show_line_numbers: true
+    enable_minimap: false  # 生产环境关闭小地图
+
+# 缓存配置
+cache:
+  enabled: true
+  default_ttl: 1800  # 生产环境延长缓存时间
+  redis:
+    enabled: true
+    compression: true
+
+# 安全配置
+security:
+  file_validation:
+    check_file_content: true  # 生产环境启用内容检查
+  cors:
+    origins: ["https://yourdomain.com", "https://www.yourdomain.com"]
+
+# 监控配置
+monitoring:
+  health_check:
+    interval: 60  # 生产环境降低健康检查频率
+  metrics:
+    collection_interval: 300
+    retention_days: 90
+
+# 备份配置
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  retention: 30  # 生产环境保留更长时间
+  storage:
+    local: true
+    remote: true  # 生产环境启用远程备份

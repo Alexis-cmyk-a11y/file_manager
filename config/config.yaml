@@ -1,0 +1,419 @@
+# 文件管理系统主配置文件
+# 支持多环境配置，无需环境变量
+
+# 应用基础配置
+app:
+  name: "文件管理系统"
+  version: "2.0.0"
+  description: "现代化的文件管理系统，支持在线编辑、权限管理、性能监控"
+  author: "File Manager Team"
+  contact: "support@filemanager.local"
+  
+# 环境配置
+environments:
+  development:
+    debug: true
+    log_level: DEBUG
+    server:
+      host: "127.0.0.1"
+      port: 8888
+      workers: 1
+      timeout: 30
+    features:
+      enable_performance_monitoring: true
+      enable_security_logging: true
+      enable_cache: true
+      enable_compression: true
+      enable_debug_toolbar: true
+    limits:
+      max_file_size: 1073741824  # 1GB
+      max_upload_files: 100
+      max_path_length: 4096
+      max_concurrent_uploads: 5
+      
+  production:
+    debug: false
+    log_level: INFO
+    server:
+      host: "0.0.0.0"
+      port: 8888
+      workers: 4
+      timeout: 60
+    features:
+      enable_performance_monitoring: true
+      enable_security_logging: true
+      enable_cache: true
+      enable_compression: true
+      enable_debug_toolbar: false
+    limits:
+      max_file_size: 10737418240  # 10GB
+      max_upload_files: 100
+      max_path_length: 4096
+      max_concurrent_uploads: 10
+      
+  testing:
+    debug: true
+    log_level: DEBUG
+    server:
+      host: "127.0.0.1"
+      port: 8889
+      workers: 1
+      timeout: 30
+    features:
+      enable_performance_monitoring: false
+      enable_security_logging: false
+      enable_cache: false
+      enable_compression: false
+      enable_debug_toolbar: true
+    limits:
+      max_file_size: 104857600  # 100MB
+      max_upload_files: 10
+      max_path_length: 1024
+      max_concurrent_uploads: 2
+
+# 数据库配置
+database:
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "file_manager"
+    username: "root"
+    password: "z6tsJw9NqvsDy6vZ"
+    charset: "utf8mb4"
+    pool:
+      max_connections: 20
+      min_connections: 5
+      pool_recycle: 3600
+      pool_pre_ping: true
+      echo: false
+    options:
+      autocommit: true
+      isolation_level: "READ_COMMITTED"
+      connect_timeout: 10
+      read_timeout: 30
+      write_timeout: 30
+    maintenance:
+      log_retention_days: 30
+      auto_cleanup: true
+      cleanup_schedule: "0 2 * * *"
+      optimize_schedule: "0 3 * * 0"
+      
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
+    password: null
+    ssl: false
+    pool:
+      max_connections: 20
+      retry_on_timeout: true
+      socket_keepalive: true
+      health_check_interval: 30
+
+# 安全配置
+security:
+  secret_key: null  # 自动生成
+  session_timeout: 3600
+  rate_limit: "100 per minute"
+  jwt_expiration: 86400  # 24小时
+  password_policy:
+    min_length: 8
+    require_uppercase: true
+    require_lowercase: true
+    require_numbers: true
+    require_special: true
+  file_validation:
+    # 移除文件扩展名限制，允许所有文件类型上传
+    max_file_size: 1073741824
+    enable_virus_scan: false
+    check_file_content: false
+  cors:
+    enabled: true
+    origins: ["*"]
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers: ["Content-Type", "Authorization"]
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/file_manager.log"
+  max_size: 10485760  # 10MB
+  backup_count: 30
+  console:
+    enabled: true
+    colored: true
+  file_config:
+    enabled: true
+    rotation: "midnight"
+    compression: true
+  json:
+    enabled: true
+    include_timestamp: true
+    include_level: true
+  performance:
+    enabled: true
+    slow_threshold: 1.0
+    log_slow_queries: true
+
+# 缓存配置
+cache:
+  enabled: true
+  default_ttl: 300  # 5分钟
+  max_items: 10000
+  strategies:
+    dir_listing: 180
+    file_info: 600
+    session: 3600
+    config: 1800
+  redis:
+    enabled: true
+    key_prefix: "file_manager:"
+    compression: true
+
+# 前端配置
+frontend:
+  app_name: "文件管理系统"
+  theme:
+    primary_color: "#4a6fa5"
+    secondary_color: "#6c8ebf"
+    background_color: "#ffffff"
+    text_color: "#333333"
+    accent_color: "#e74c3c"
+    success_color: "#28a745"
+    warning_color: "#ffc107"
+    error_color: "#dc3545"
+    info_color: "#17a2b8"
+  features:
+    default_view: "list"
+    page_size: 50
+    show_hidden: false
+    enable_drag_drop: true
+    enable_preview: true
+    enable_search: true
+    enable_sorting: true
+    enable_bulk_operations: true
+    enable_keyboard_shortcuts: true
+    enable_context_menu: true
+    enable_breadcrumb: true
+    enable_file_tree: true
+    enable_thumbnails: true
+    enable_progress_bar: true
+  editor:
+    enabled: true
+    themes: ["default", "monokai", "eclipse", "dracula", "solarized"]
+    syntax_highlighting: true
+    line_numbers: true
+    word_wrap: true
+    auto_complete: true
+    bracket_matching: true
+    line_folding: true
+    search_replace: true
+    minimap: true
+    font_size: 14
+    font_family: "Consolas, Monaco, 'Courier New', monospace"
+    tab_size: 4
+    insert_spaces: true
+    auto_save: true
+    auto_save_interval: 30000
+    max_file_size: 10485760
+  notifications:
+    auto_hide: true
+    auto_hide_delay: 5000
+    max_notifications: 5
+    position: "top-right"
+    animation: "slide"
+    sound: false
+    desktop: false
+  upload:
+    max_file_size: 1073741824
+    max_files: 100
+    allowed_extensions: []
+    # 移除文件扩展名限制，允许所有文件类型上传
+    chunk_size: 1048576
+    retry_attempts: 3
+    retry_delay: 1000
+    show_progress: true
+    auto_start: true
+    concurrent: 3
+  download:
+    enable_resume: true
+    chunk_size: 1048576
+    concurrent: 3
+    show_progress: true
+    auto_start: true
+    rate_limit: "1000 per minute"
+  preview:
+    enabled: true
+    max_size: 10485760
+    supported_types: [
+      ".txt", ".md", ".py", ".js", ".html", ".css", ".json", ".xml",
+      ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
+    ]
+    image_formats: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp"]
+    text_formats: [".txt", ".md", ".py", ".js", ".html", ".css", ".json", ".xml", ".sql", ".sh", ".bat"]
+    office_formats: [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"]
+    video_formats: [".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm"]
+    audio_formats: [".mp3", ".wav", ".flac", ".aac", ".ogg"]
+  performance:
+    lazy_loading: true
+    virtual_scrolling: true
+    debounce_delay: 300
+    throttle_delay: 100
+    cache_enabled: true
+    cache_size: 100
+    preload_enabled: true
+    preload_count: 10
+  security:
+    enable_file_validation: true
+    enable_path_validation: true
+    max_path_length: 4096
+    forbidden_characters: ["<", ">", ":", "\"", "|", "?", "*"]
+    enable_xss_protection: true
+    enable_csrf_protection: true
+  i18n:
+    default_language: "zh-CN"
+    supported_languages: ["zh-CN", "en-US"]
+    date_format: "YYYY-MM-DD"
+    time_format: "HH:mm:ss"
+    number_format:
+      decimal: "."
+      thousands: ","
+      precision: 2
+  shortcuts:
+    "Ctrl+S": "保存文件"
+    "Ctrl+F": "搜索"
+    "Ctrl+Z": "撤销"
+    "Ctrl+Y": "重做"
+    "Ctrl+A": "全选"
+    "Ctrl+C": "复制"
+    "Ctrl+V": "粘贴"
+    "Ctrl+X": "剪切"
+    "Ctrl+D": "删除"
+    "Ctrl+N": "新建文件夹"
+    "Ctrl+U": "上传文件"
+    "F5": "刷新"
+    "F2": "重命名"
+    "Delete": "删除"
+    "Enter": "打开/进入"
+    "Backspace": "返回上级"
+  error_handling:
+    retry_attempts: 3
+    retry_delay: 1000
+    show_details: false
+    log_errors: true
+    user_friendly_messages: true
+
+# 文件系统配置
+filesystem:
+  root_directory: null  # 自动检测
+  upload:
+    enabled: true
+    chunk_size: 1048576  # 1MB
+    create_date_folders: true
+    preserve_original_names: true
+    validation:
+      check_file_type: true
+      check_file_size: true
+      check_file_content: false
+  download:
+    enabled: true
+    enable_resume: true
+    chunk_size: 1048576  # 1MB
+    rate_limit: "1000 per minute"
+    max_concurrent: 10
+  preview:
+    enabled: true
+    max_size: 10485760  # 10MB
+    supported_types: [".txt", ".md", ".py", ".js", ".html", ".css", ".json", ".xml"]
+  storage:
+    type: "local"  # local, s3, tencent_cloud
+    local:
+      path: "uploads"
+      max_size: 107374182400  # 100GB
+    s3:
+      enabled: false
+      bucket: ""
+      region: ""
+      access_key: ""
+      secret_key: ""
+    tencent_cloud:
+      enabled: false
+      secret_id: ""
+      secret_key: ""
+      region: ""
+      bucket: ""
+
+# 性能监控配置
+performance:
+  monitoring_enabled: true
+  slow_threshold: 1.0  # 秒
+  metrics_retention: 100
+  profiling:
+    enabled: true
+    sample_rate: 0.1
+  alerts:
+    cpu_threshold: 80
+    memory_threshold: 80
+    disk_threshold: 90
+  metrics:
+    enabled: true
+    collection_interval: 60
+    export_format: "json"
+
+# 国际化配置
+i18n:
+  default_language: "zh-CN"
+  supported_languages: ["zh-CN", "en-US"]
+  date_format: "YYYY-MM-DD"
+  time_format: "HH:mm:ss"
+  timezone: "Asia/Shanghai"
+  fallback_language: "en-US"
+
+# 备份配置
+backup:
+  enabled: false
+  schedule: "0 2 * * *"  # 每天凌晨2点
+  retention: 7  # 保留7天
+  content:
+    config: true
+    logs: true
+    uploads: false
+  storage:
+    local: true
+    remote: false
+    compression: true
+
+# 邮件配置
+email:
+  enabled: false
+  smtp:
+    host: "smtp.gmail.com"
+    port: 587
+    username: ""
+    password: ""
+    use_tls: true
+  templates:
+    verification: "email_verification.html"
+    reset_password: "reset_password.html"
+    notification: "notification.html"
+
+# 监控和告警配置
+monitoring:
+  health_check:
+    enabled: true
+    interval: 30
+    timeout: 10
+  metrics:
+    enabled: true
+    collection_interval: 60
+    retention_days: 30
+  alerts:
+    enabled: true
+    channels: ["log", "email"]
+    thresholds:
+      cpu: 80
+      memory: 80
+      disk: 90
+      response_time: 2.0

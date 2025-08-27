@@ -127,20 +127,61 @@ class LoggerManager:
     
     def _setup_logging(self):
         """设置日志系统"""
+        # 获取日志配置，支持新旧两种配置格式
+        if hasattr(self.config, 'LOG_FILE'):
+            # 旧配置格式
+            log_file = self.config.LOG_FILE
+            log_level = self.config.LOG_LEVEL
+            log_max_size = self.config.LOG_MAX_SIZE
+            log_backup_count = self.config.LOG_BACKUP_COUNT
+        else:
+            # 新配置格式
+            if hasattr(self.config, 'get_logging_config'):
+                # 使用配置管理器的方法
+                logging_config = self.config.get_logging_config()
+                log_file = logging_config.file
+                log_level = logging_config.level
+                log_max_size = logging_config.max_size
+                log_backup_count = logging_config.backup_count
+            else:
+                # 直接获取配置
+                logging_config = self.config.get('logging', {})
+                log_file = logging_config.get('file', 'logs/file_manager.log')
+                log_level = logging_config.get('level', 'INFO')
+                log_max_size = logging_config.get('max_size', 10485760)
+                log_backup_count = logging_config.get('backup_count', 30)
+        
+        # 确保所有配置都有默认值
+        if log_file is None:
+            log_file = 'logs/file_manager.log'
+        if log_level is None:
+            log_level = 'INFO'
+        if log_max_size is None:
+            log_max_size = 10485760
+        if log_backup_count is None:
+            log_backup_count = 30
+        
+        # 调试信息
+        print(f"🔍 日志配置调试:")
+        print(f"  - log_file: {log_file} (类型: {type(log_file)})")
+        print(f"  - log_level: {log_level} (类型: {type(log_level)})")
+        print(f"  - log_max_size: {log_max_size} (类型: {type(log_max_size)})")
+        print(f"  - log_backup_count: {log_backup_count} (类型: {type(log_backup_count)})")
+        
         # 确保日志文件路径是绝对路径
-        if not os.path.isabs(self.config.LOG_FILE):
+        if not os.path.isabs(log_file):
             # 如果是相对路径，则相对于项目根目录
             # 使用更可靠的路径解析方法
             try:
                 # 尝试从当前工作目录解析
                 project_root = os.getcwd()
-                log_file_path = os.path.join(project_root, self.config.LOG_FILE)
+                log_file_path = os.path.join(project_root, log_file)
             except:
                 # 如果失败，使用文件路径解析
                 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                log_file_path = os.path.join(project_root, self.config.LOG_FILE)
+                log_file_path = os.path.join(project_root, log_file)
         else:
-            log_file_path = self.config.LOG_FILE
+            log_file_path = log_file
         
         log_file_path = Path(log_file_path)
         
@@ -150,7 +191,7 @@ class LoggerManager:
         
         # 设置根日志级别
         root_logger = logging.getLogger()
-        root_logger.setLevel(getattr(logging, self.config.LOG_LEVEL))
+        root_logger.setLevel(getattr(logging, log_level))
         
         # 清除根日志记录器的现有处理器
         for handler in root_logger.handlers[:]:
@@ -159,8 +200,8 @@ class LoggerManager:
         # 为根日志记录器添加文件处理器
         root_file_handler = self._create_file_handler(
             str(log_file_path),
-            self.config.LOG_MAX_SIZE,
-            self.config.LOG_BACKUP_COUNT
+            log_max_size,
+            log_backup_count
         )
         root_logger.addHandler(root_file_handler)
         
@@ -178,33 +219,79 @@ class LoggerManager:
         # 配置第三方库日志
         self._setup_third_party_logging()
     
+    def _get_log_format(self):
+        """获取日志格式"""
+        if hasattr(self.config, 'LOG_FORMAT'):
+            return self.config.LOG_FORMAT
+        else:
+            logging_config = self.config.get('logging', {})
+            return logging_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    def _get_environment(self):
+        """获取环境"""
+        if hasattr(self.config, 'ENV'):
+            return self.config.ENV
+        elif hasattr(self.config, 'environment'):
+            return self.config.environment
+        else:
+            return 'production'
+    
     def _setup_flask_logging(self):
         """配置Flask应用日志"""
         app_logger = logging.getLogger('werkzeug')
         app_logger.setLevel(logging.INFO)
         
+        # 获取日志配置，支持新旧两种配置格式
+        if hasattr(self.config, 'LOG_FILE'):
+            # 旧配置格式
+            log_file = self.config.LOG_FILE
+            log_max_size = self.config.LOG_MAX_SIZE
+            log_backup_count = self.config.LOG_BACKUP_COUNT
+        else:
+            # 新配置格式
+            if hasattr(self.config, 'get_logging_config'):
+                # 使用配置管理器的方法
+                logging_config = self.config.get_logging_config()
+                log_file = logging_config.file
+                log_max_size = logging_config.max_size
+                log_backup_count = logging_config.backup_count
+            else:
+                # 直接获取配置
+                logging_config = self.config.get('logging', {})
+                log_file = logging_config.get('file', 'logs/file_manager.log')
+                log_max_size = logging_config.get('max_size', 10485760)
+                log_backup_count = logging_config.get('backup_count', 30)
+        
+        # 确保所有配置都有默认值
+        if log_file is None:
+            log_file = 'logs/file_manager.log'
+        if log_max_size is None:
+            log_max_size = 10485760
+        if log_backup_count is None:
+            log_backup_count = 30
+        
         # 确保日志文件路径是绝对路径
-        if not os.path.isabs(self.config.LOG_FILE):
+        if not os.path.isabs(log_file):
             # 如果是相对路径，则相对于项目根目录
             # 使用更可靠的路径解析方法
             try:
                 # 尝试从当前工作目录解析
                 project_root = os.getcwd()
-                log_file_path = os.path.join(project_root, self.config.LOG_FILE)
+                log_file_path = os.path.join(project_root, log_file)
             except:
                 # 如果失败，使用文件路径解析
                 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                log_file_path = os.path.join(project_root, self.config.LOG_FILE)
+                log_file_path = os.path.join(project_root, log_file)
         else:
-            log_file_path = self.config.LOG_FILE
+            log_file_path = log_file
         
         log_file_path = Path(log_file_path)
         
         # 添加文件处理器
         file_handler = self._create_file_handler(
             str(log_file_path),
-            self.config.LOG_MAX_SIZE,
-            self.config.LOG_BACKUP_COUNT
+            log_max_size,
+            log_backup_count
         )
         app_logger.addHandler(file_handler)
         
@@ -255,10 +342,11 @@ class LoggerManager:
         )
         
         # 设置格式化器
-        if self.config.LOG_FORMAT == 'json':
+        log_format = self._get_log_format()
+        if log_format == 'json':
             formatter = JSONFormatter()
         else:
-            formatter = logging.Formatter(self.config.LOG_FORMAT)
+            formatter = logging.Formatter(log_format)
         
         handler.setFormatter(formatter)
         return handler
@@ -268,7 +356,8 @@ class LoggerManager:
         handler = logging.StreamHandler(sys.stdout)
         
         # 根据环境选择格式化器
-        if self.config.ENV == 'development':
+        env = self._get_environment()
+        if env == 'development':
             formatter = ColoredFormatter(
                 '%(timestamp)s - %(levelname)s - %(name)s - %(message)s'
             )
@@ -311,8 +400,14 @@ def get_logger(name: str) -> StructuredLogger:
     """获取日志记录器的便捷函数"""
     global _logger_manager
     if _logger_manager is None:
-        from core.config import Config
-        _logger_manager = LoggerManager(Config())
+        try:
+            # 尝试使用新的配置管理器
+            from core.config_manager import config_manager
+            _logger_manager = LoggerManager(config_manager)
+        except ImportError:
+            # 回退到旧的配置类
+            from core.config import Config
+            _logger_manager = LoggerManager(Config())
     
     return _logger_manager.get_logger(name)
 

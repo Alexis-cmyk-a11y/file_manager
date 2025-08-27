@@ -1,0 +1,261 @@
+/**
+ * CSS变量定义文件
+ * 定义全局的CSS变量，支持主题切换
+ */
+
+:root {
+    /* 主色调 */
+    --primary-color: #4a6fa5;
+    --primary-light: #6c8ebf;
+    --primary-dark: #2c4a6a;
+    --primary-hover: #5a7fb5;
+    --primary-active: #3a5f95;
+    
+    /* 次要色调 */
+    --secondary-color: #6c8ebf;
+    --secondary-light: #8ea8d9;
+    --secondary-dark: #4a6fa5;
+    --secondary-hover: #7c9ecf;
+    --secondary-active: #5a7fb5;
+    
+    /* 背景色 */
+    --background-color: #ffffff;
+    --background-secondary: #f8f9fa;
+    --background-tertiary: #e9ecef;
+    --background-hover: #f1f3f4;
+    --background-active: #e3e6ea;
+    
+    /* 文本色 */
+    --text-color: #333333;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --text-disabled: #cccccc;
+    --text-inverse: #ffffff;
+    
+    /* 状态色 */
+    --success-color: #28a745;
+    --success-light: #d4edda;
+    --success-dark: #1e7e34;
+    --warning-color: #ffc107;
+    --warning-light: #fff3cd;
+    --warning-dark: #d39e00;
+    --error-color: #dc3545;
+    --error-light: #f8d7da;
+    --error-dark: #c82333;
+    --info-color: #17a2b8;
+    --info-light: #d1ecf1;
+    --info-dark: #117a8b;
+    
+    /* 边框色 */
+    --border-color: #dee2e6;
+    --border-light: #e9ecef;
+    --border-dark: #adb5bd;
+    --border-focus: var(--primary-color);
+    
+    /* 阴影 */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15), 0 10px 10px rgba(0, 0, 0, 0.05);
+    
+    /* 圆角 */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    --border-radius-pill: 9999px;
+    
+    /* 间距 */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-xxl: 48px;
+    
+    /* 字体大小 */
+    --font-size-xs: 12px;
+    --font-size-sm: 14px;
+    --font-size-md: 16px;
+    --font-size-lg: 18px;
+    --font-size-xl: 20px;
+    --font-size-xxl: 24px;
+    --font-size-title: 32px;
+    
+    /* 字体权重 */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* 行高 */
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+    
+    /* 过渡动画 */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Z-index层级 */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-toast: 1080;
+    
+    /* 布局 */
+    --header-height: 60px;
+    --sidebar-width: 250px;
+    --sidebar-collapsed-width: 60px;
+    --content-max-width: 1200px;
+    --container-padding: var(--spacing-lg);
+    
+    /* 文件类型图标颜色 */
+    --file-type-text: #6c757d;
+    --file-type-image: #28a745;
+    --file-type-video: #dc3545;
+    --file-type-audio: #17a2b8;
+    --file-type-archive: #fd7e14;
+    --file-type-document: #007bff;
+    --file-type-code: #6f42c1;
+    --file-type-binary: #495057;
+    
+    /* 拖拽状态 */
+    --drag-over-bg: rgba(74, 111, 165, 0.1);
+    --drag-over-border: var(--primary-color);
+    
+    /* 选择状态 */
+    --selection-bg: rgba(74, 111, 165, 0.2);
+    --selection-border: var(--primary-color);
+    
+    /* 加载状态 */
+    --loading-bg: rgba(255, 255, 255, 0.8);
+    --loading-spinner: var(--primary-color);
+    
+    /* 滚动条 */
+    --scrollbar-width: 8px;
+    --scrollbar-track: var(--background-tertiary);
+    --scrollbar-thumb: var(--border-dark);
+    --scrollbar-thumb-hover: var(--text-muted);
+}
+
+/* 深色主题 */
+[data-theme="dark"] {
+    --background-color: #1a1a1a;
+    --background-secondary: #2d2d2d;
+    --background-tertiary: #404040;
+    --background-hover: #353535;
+    --background-active: #4a4a4a;
+    
+    --text-color: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #999999;
+    --text-disabled: #666666;
+    --text-inverse: #333333;
+    
+    --border-color: #404040;
+    --border-light: #353535;
+    --border-dark: #666666;
+    
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.4), 0 10px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* 高对比度主题 */
+[data-theme="high-contrast"] {
+    --primary-color: #000000;
+    --primary-light: #333333;
+    --primary-dark: #000000;
+    
+    --background-color: #ffffff;
+    --background-secondary: #f0f0f0;
+    --background-tertiary: #e0e0e0;
+    
+    --text-color: #000000;
+    --text-secondary: #333333;
+    --text-muted: #666666;
+    
+    --border-color: #000000;
+    --border-light: #333333;
+    --border-dark: #000000;
+    
+    --success-color: #006600;
+    --warning-color: #cc6600;
+    --error-color: #cc0000;
+    --info-color: #0066cc;
+}
+
+/* 响应式断点 */
+@media (max-width: 576px) {
+    :root {
+        --container-padding: var(--spacing-md);
+        --font-size-md: 14px;
+        --font-size-lg: 16px;
+        --font-size-xl: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 200px;
+        --header-height: 50px;
+    }
+}
+
+@media (max-width: 992px) {
+    :root {
+        --sidebar-width: 220px;
+    }
+}
+
+/* 打印样式 */
+@media print {
+    :root {
+        --background-color: #ffffff;
+        --text-color: #000000;
+        --border-color: #000000;
+        --shadow-sm: none;
+        --shadow-md: none;
+        --shadow-lg: none;
+        --shadow-xl: none;
+    }
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0s;
+        --transition-normal: 0s;
+        --transition-slow: 0s;
+    }
+}
+
+/* 高对比度偏好 */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: #000000;
+        --border-light: #000000;
+        --border-dark: #000000;
+    }
+}
+
+/* 深色模式偏好 */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #1a1a1a;
+        --background-secondary: #2d2d2d;
+        --background-tertiary: #404040;
+        --text-color: #ffffff;
+        --text-secondary: #cccccc;
+        --text-muted: #999999;
+        --border-color: #404040;
+    }
+}

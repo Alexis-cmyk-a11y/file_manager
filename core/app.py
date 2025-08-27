@@ -31,10 +31,10 @@ def create_app(config_class=Config):
     app.config['SESSION_TYPE'] = 'filesystem'
     app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24小时
     
-    # 确保session目录存在
-    session_dir = os.path.join(os.path.abspath('.'), 'flask_session')
-    if not os.path.exists(session_dir):
-        os.makedirs(session_dir)
+    # 使用临时目录存储session文件
+    import tempfile
+    session_dir = tempfile.mkdtemp(prefix='file_manager_session_')
+    app.config['SESSION_FILE_DIR'] = session_dir
     
     # 处理打包后的资源路径
     def resource_path(relative_path):
@@ -229,45 +229,7 @@ def register_page_routes(app):
         """健康检查端点（无需认证）"""
         return {'status': 'healthy', 'message': '文件管理系统运行正常'}
     
-    @app.route('/debug-session')
-    def debug_session():
-        """调试session信息（无需认证）"""
-        return {
-            'session_data': dict(session),
-            'session_type': app.config.get('SESSION_TYPE'),
-            'secret_key_set': bool(app.config.get('SECRET_KEY')),
-            'session_dir': os.path.join(os.path.abspath('.'), 'flask_session')
-        }
-    
-    @app.route('/test-api')
-    def test_api():
-        """API测试页面"""
-        return render_template('test_api.html')
-    
-    @app.route('/LICENSE')
-    def license_file():
-        """提供LICENSE文件"""
-        try:
-            with open('LICENSE', 'r', encoding='utf-8') as f:
-                content = f.read()
-            return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        except FileNotFoundError:
-            return 'License file not found', 404
-    
-    @app.route('/CONTRIBUTING.md')
-    def contributing_file():
-        """提供CONTRIBUTING.md文件"""
-        try:
-            with open('CONTRIBUTING.md', 'r', encoding='utf-8') as f:
-                content = f.read()
-            return content, 200, {'Content-Type': 'text/markdown; charset=utf-8'}
-        except FileNotFoundError:
-            return 'Contributing file not found', 404
-    
-    @app.route('/debug')
-    def debug_page():
-        """调试页面"""
-        return render_template('debug_page.html')
+
 
 def register_error_handlers(app):
     """注册错误处理器"""
