@@ -274,12 +274,80 @@ class FileEditor {
     
     loadFileFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
-        const filePath = urlParams.get('file');
+        // 支持两种参数名：path 和 file
+        const filePath = urlParams.get('path') || urlParams.get('file');
         
         if (filePath) {
             this.openFile(filePath);
         } else {
             this.showNotification('未指定文件路径', 'error');
+            // 显示错误信息并提供返回选项
+            this.showPathError();
+        }
+    }
+    
+    // 显示路径错误信息
+    showPathError() {
+        const editorMain = document.querySelector('.editor-main');
+        if (editorMain) {
+            editorMain.innerHTML = `
+                <div class="error-container" style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    text-align: center;
+                    padding: 40px;
+                ">
+                    <div class="error-icon" style="
+                        font-size: 64px;
+                        color: #dc2626;
+                        margin-bottom: 24px;
+                    ">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h2 style="
+                        color: #111827;
+                        margin: 0 0 16px 0;
+                        font-size: 24px;
+                    ">未指定文件路径</h2>
+                    <p style="
+                        color: #6b7280;
+                        margin: 0 0 32px 0;
+                        font-size: 16px;
+                        max-width: 400px;
+                        line-height: 1.6;
+                    ">编辑器需要指定要编辑的文件路径。请从文件管理页面选择文件进行编辑。</p>
+                    <div class="error-actions" style="
+                        display: flex;
+                        gap: 16px;
+                        flex-wrap: wrap;
+                        justify-content: center;
+                    ">
+                        <button onclick="window.close()" style="
+                            background: #6b7280;
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            transition: all 0.2s;
+                        ">关闭页面</button>
+                        <button onclick="window.history.back()" style="
+                            background: #3b82f6;
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            transition: all 0.2s;
+                        ">返回上页</button>
+                    </div>
+                </div>
+            `;
         }
     }
     

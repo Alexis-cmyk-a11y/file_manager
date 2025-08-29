@@ -147,7 +147,7 @@ def create_app(config_class=Config):
 
 def register_blueprints(app):
     """注册蓝图"""
-    from api.routes import file_ops, upload, download, system, editor, auth
+    from api.routes import file_ops, upload, download, system, editor, auth, sharing
     
     app.register_blueprint(file_ops.bp)
     app.register_blueprint(upload.bp)
@@ -155,6 +155,8 @@ def register_blueprints(app):
     app.register_blueprint(system.bp)
     app.register_blueprint(editor.bp)
     app.register_blueprint(auth.bp)
+
+    app.register_blueprint(sharing.sharing_bp, url_prefix='/api/sharing')
 
 def register_page_routes(app):
     """注册页面路由"""
@@ -191,6 +193,12 @@ def register_page_routes(app):
     def editor_page():
         """编辑器页面（需要登录）"""
         return render_template('editor.html')
+    
+    @app.route('/shared')
+    # @require_auth  # 临时注释掉身份验证
+    def shared_files_page():
+        """共享文件页面（需要登录）"""
+        return render_template('shared_files.html')
     
     @app.route('/login')
     def login_page():

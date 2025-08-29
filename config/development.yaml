@@ -7,7 +7,7 @@ log_level: DEBUG
 
 # 服务器配置
 server:
-  host: "127.0.0.1"
+  host: "0.0.0.0"  # 允许所有IP访问
   port: 8888
   workers: 1
   timeout: 30

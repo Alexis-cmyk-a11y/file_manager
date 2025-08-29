@@ -202,6 +202,9 @@ class AuthService:
             
             user_id = self.mysql_service.create_user(user_data)
             if user_id:
+                # 为新用户创建个人空间
+                self._setup_new_user_space(user_id, email)
+                
                 logger.info(f"用户注册成功: {email}, 用户ID: {user_id}")
                 return True, "注册成功"
             else:
@@ -210,6 +213,21 @@ class AuthService:
         except Exception as e:
             logger.error(f"用户注册失败: {e}")
             return False, "系统错误，请稍后重试"
+    
+    def _setup_new_user_space(self, user_id: int, email: str) -> None:
+        """为新用户创建个人空间"""
+        try:
+            # 创建用户个人空间
+            username = email.split('@')[0]
+            success = self._create_user_personal_space(user_id, username)
+            if success:
+                logger.info(f"新用户 {email} 个人空间创建成功")
+            else:
+                logger.warning(f"新用户 {email} 个人空间创建失败")
+                
+        except Exception as e:
+            logger.error(f"为新用户 {email} 创建个人空间失败: {e}")
+            # 不抛出异常，避免影响用户注册流程
     
     def check_ip_lockout(self, ip: str) -> Tuple[bool, str]:
         """检查IP是否被锁定"""
@@ -368,6 +386,38 @@ class AuthService:
                 
         except Exception as e:
             logger.error(f"创建管理员账户失败: {e}")
+            return False
+
+    def _create_user_personal_space(self, user_id: int, username: str) -> bool:
+        """创建用户个人空间"""
+        try:
+            import os
+            
+            # 创建用户目录
+            user_dir = os.path.join('home', 'users', username)
+            shared_dir = os.path.join('home', 'shared', f'{username}_shared')
+            
+            # 确保目录存在
+            os.makedirs(user_dir, exist_ok=True)
+            os.makedirs(shared_dir, exist_ok=True)
+            
+            # 设置目录权限（只读共享目录）
+            os.chmod(shared_dir, 0o755)
+            
+            # 在数据库中记录用户空间
+            mysql_service = get_mysql_service()
+            sql = """
+            INSERT INTO user_spaces (user_id, username, space_path) 
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE space_path = VALUES(space_path)
+            """
+            mysql_service.execute_update(sql, (user_id, username, user_dir))
+            
+            logger.info(f"用户 {username} 个人空间创建成功: {user_dir}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"创建用户 {username} 个人空间失败: {e}")
             return False
 
 # 全局实例

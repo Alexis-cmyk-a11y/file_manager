@@ -8,6 +8,7 @@ from services.download_service import DownloadService
 from utils.logger import get_logger
 from utils.auth_middleware import require_auth_api, get_current_user
 
+
 logger = get_logger(__name__)
 bp = Blueprint('download', __name__, url_prefix='/api')
 
@@ -20,7 +21,7 @@ def get_user_info():
 @bp.route('/download', methods=['GET'])
 @require_auth_api
 def download_file():
-    """智能下载文件或目录"""
+    """智能下载文件或目录（需要读取权限）"""
     try:
         file_path = request.args.get('path', '')
         if not file_path:
@@ -69,7 +70,7 @@ def download_file():
 @bp.route('/download_zip', methods=['GET'])
 @require_auth_api
 def download_directory_as_zip():
-    """将目录打包为ZIP文件下载"""
+    """将目录打包为ZIP文件下载（需要读取权限）"""
     try:
         directory_path = request.args.get('path', '')
         if not directory_path:
@@ -98,7 +99,7 @@ def download_directory_as_zip():
         return download_service.download_directory_as_zip(directory_path, user_ip, user_agent)
         
     except Exception as e:
-        logger.error(f"目录下载失败: {str(e)}")
+        logger.error(f"目录ZIP下载失败: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)

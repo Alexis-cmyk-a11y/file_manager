@@ -6,6 +6,8 @@ Redis服务模块
 import redis
 import json
 import pickle
+import time
+import threading
 from typing import Any, Optional, Union, List, Dict
 from utils.logger import get_logger
 
@@ -24,6 +26,8 @@ class RedisService:
         self.config = config
         self._redis_client = None
         self._connection_pool = None
+        self._use_memory_fallback = False
+        self._memory_storage = {}  # 内存存储作为Redis的备用方案
         self._init_connection()
     
     def _init_connection(self):
@@ -37,11 +41,10 @@ class RedisService:
                 'port': self.config.REDIS_PORT,
                 'db': self.config.REDIS_DB,
                 'password': self.config.REDIS_PASSWORD,
-                'max_connections': self.config.REDIS_CONNECTION_POOL_SIZE,
-                'socket_timeout': self.config.REDIS_SOCKET_TIMEOUT,
-                'socket_connect_timeout': self.config.REDIS_SOCKET_CONNECT_TIMEOUT,
-                'retry_on_timeout': self.config.REDIS_RETRY_ON_TIMEOUT,
-                'health_check_interval': self.config.REDIS_HEALTH_CHECK_INTERVAL,
+                'max_connections': self.config.REDIS_POOL_CONFIG.get('max_connections', 20),
+                'retry_on_timeout': self.config.REDIS_POOL_CONFIG.get('retry_on_timeout', True),
+                'socket_keepalive': self.config.REDIS_POOL_CONFIG.get('socket_keepalive', True),
+                'health_check_interval': self.config.REDIS_POOL_CONFIG.get('health_check_interval', 30),
                 'decode_responses': True  # 自动解码响应
             }
             
@@ -64,12 +67,19 @@ class RedisService:
         except redis.ConnectionError as e:
             logger.error(f"Redis连接失败: {e}")
             self._redis_client = None
+            self._use_memory_fallback = True
+            logger.warning("Redis连接失败，将使用内存存储作为备用方案")
         except Exception as e:
             logger.error(f"Redis初始化错误: {e}")
             self._redis_client = None
+            self._use_memory_fallback = True
+            logger.warning("Redis初始化失败，将使用内存存储作为备用方案")
     
     def is_connected(self) -> bool:
         """检查Redis是否已连接"""
+        if self._use_memory_fallback:
+            return True  # 内存模式总是可用的
+        
         if self._redis_client is None:
             return False
         
@@ -93,6 +103,9 @@ class RedisService:
     # 字符串操作
     def set(self, key: str, value: Any, ex: Optional[int] = None, nx: bool = False, xx: bool = False) -> bool:
         """设置键值对"""
+        if self._use_memory_fallback:
+            return self._memory_set(key, value, ex, nx, xx)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -108,6 +121,9 @@ class RedisService:
     
     def setex(self, key: str, time: int, value: Any) -> bool:
         """设置键值对并指定过期时间"""
+        if self._use_memory_fallback:
+            return self._memory_setex(key, time, value)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -123,6 +139,9 @@ class RedisService:
     
     def get(self, key: str, default: Any = None) -> Any:
         """获取键值"""
+        if self._use_memory_fallback:
+            return self._memory_get(key, default)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -148,6 +167,9 @@ class RedisService:
     
     def delete(self, *keys: str) -> int:
         """删除键"""
+        if self._use_memory_fallback:
+            return self._memory_delete(*keys)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -160,6 +182,9 @@ class RedisService:
     
     def exists(self, *keys: str) -> int:
         """检查键是否存在"""
+        if self._use_memory_fallback:
+            return self._memory_exists(*keys)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -172,6 +197,9 @@ class RedisService:
     
     def expire(self, key: str, time: int) -> bool:
         """设置键过期时间"""
+        if self._use_memory_fallback:
+            return self._memory_expire(key, time)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -184,6 +212,9 @@ class RedisService:
     
     def ttl(self, key: str) -> int:
         """获取键剩余生存时间"""
+        if self._use_memory_fallback:
+            return self._memory_ttl(key)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -196,6 +227,9 @@ class RedisService:
     
     def incr(self, key: str, amount: int = 1) -> int:
         """增加键的值"""
+        if self._use_memory_fallback:
+            return self._memory_incr(key, amount)
+        
         try:
             client = self.get_client()
             if client is None:
@@ -545,6 +579,9 @@ class RedisService:
     
     def ping(self) -> bool:
         """测试Redis连接"""
+        if self._use_memory_fallback:
+            return True  # 内存模式总是可用的
+        
         try:
             client = self.get_client()
             if client is None:
@@ -554,6 +591,142 @@ class RedisService:
         except Exception as e:
             logger.error(f"Redis PING操作失败: {e}")
             return False
+    
+    # 内存存储备用方法
+    def _memory_set(self, key: str, value: Any, ex: Optional[int] = None, nx: bool = False, xx: bool = False) -> bool:
+        """内存存储设置键值对"""
+        try:
+            if nx and key in self._memory_storage:
+                return False
+            if xx and key not in self._memory_storage:
+                return False
+            
+            # 存储值和过期时间
+            expire_time = None
+            if ex:
+                import time
+                expire_time = time.time() + ex
+            
+            self._memory_storage[key] = {
+                'value': value,
+                'expire_time': expire_time
+            }
+            
+            # 设置过期清理定时器
+            if ex:
+                import threading
+                timer = threading.Timer(ex, lambda: self._memory_delete_expired(key))
+                timer.daemon = True
+                timer.start()
+            
+            return True
+        except Exception as e:
+            logger.error(f"内存存储SET操作失败: {e}")
+            return False
+    
+    def _memory_setex(self, key: str, time: int, value: Any) -> bool:
+        """内存存储设置键值对并指定过期时间"""
+        return self._memory_set(key, value, ex=time)
+    
+    def _memory_get(self, key: str, default: Any = None) -> Any:
+        """内存存储获取键值"""
+        try:
+            if key not in self._memory_storage:
+                return default
+            
+            item = self._memory_storage[key]
+            
+            # 检查是否过期
+            if item['expire_time'] and item['expire_time'] < time.time():
+                del self._memory_storage[key]
+                return default
+            
+            return item['value']
+        except Exception as e:
+            logger.error(f"内存存储GET操作失败: {e}")
+            return default
+    
+    def _memory_delete(self, *keys: str) -> int:
+        """内存存储删除键"""
+        try:
+            count = 0
+            for key in keys:
+                if key in self._memory_storage:
+                    del self._memory_storage[key]
+                    count += 1
+            return count
+        except Exception as e:
+            logger.error(f"内存存储DELETE操作失败: {e}")
+            return 0
+    
+    def _memory_exists(self, *keys: str) -> int:
+        """内存存储检查键是否存在"""
+        try:
+            count = 0
+            for key in keys:
+                if key in self._memory_storage:
+                    # 检查是否过期
+                    item = self._memory_storage[key]
+                    if item['expire_time'] and item['expire_time'] < time.time():
+                        del self._memory_storage[key]
+                    else:
+                        count += 1
+            return count
+        except Exception as e:
+            logger.error(f"内存存储EXISTS操作失败: {e}")
+            return 0
+    
+    def _memory_expire(self, key: str, time: int) -> bool:
+        """内存存储设置键过期时间"""
+        try:
+            if key in self._memory_storage:
+                import time as time_module
+                self._memory_storage[key]['expire_time'] = time_module.time() + time
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"内存存储EXPIRE操作失败: {e}")
+            return False
+    
+    def _memory_ttl(self, key: str) -> int:
+        """内存存储获取键剩余生存时间"""
+        try:
+            if key not in self._memory_storage:
+                return -2
+            
+            item = self._memory_storage[key]
+            if not item['expire_time']:
+                return -1
+            
+            remaining = item['expire_time'] - time.time()
+            return max(0, int(remaining))
+        except Exception as e:
+            logger.error(f"内存存储TTL操作失败: {e}")
+            return -2
+    
+    def _memory_incr(self, key: str, amount: int = 1) -> int:
+        """内存存储增加键的值"""
+        try:
+            current_value = self._memory_get(key, 0)
+            if not isinstance(current_value, (int, float)):
+                current_value = 0
+            
+            new_value = current_value + amount
+            self._memory_set(key, new_value)
+            return new_value
+        except Exception as e:
+            logger.error(f"内存存储INCR操作失败: {e}")
+            return 0
+    
+    def _memory_delete_expired(self, key: str):
+        """内存存储删除过期键"""
+        try:
+            if key in self._memory_storage:
+                item = self._memory_storage[key]
+                if item['expire_time'] and item['expire_time'] < time.time():
+                    del self._memory_storage[key]
+        except Exception as e:
+            logger.error(f"内存存储删除过期键失败: {e}")
     
     def close(self):
         """关闭Redis连接"""

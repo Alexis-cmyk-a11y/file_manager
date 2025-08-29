@@ -127,6 +127,18 @@ def main():
         print(f"   页面大小: {frontend_config.features.get('page_size', 50)}")
         print()
         
+        # 显示文件共享系统信息
+        print("🤝 文件共享系统:")
+        print("   共享机制: 基于硬链接的文件共享，节省磁盘空间")
+        print("   用户空间: 每个用户拥有独立的 home/users/username 目录")
+        print("   共享区域: 所有用户可在 home/shared 查看共享文件")
+        print("   ✅ 共享操作: 用户可共享/取消共享自己的文件")
+        print("   🔒 权限控制: 共享区文件只读，原文件完全控制")
+        print("   🚀 性能优化: 硬链接实现，无需额外存储空间")
+        print("   🆕 自动同步: 原文件修改自动反映到共享区")
+        print("   🔧 共享管理: 支持查看、搜索、清理孤立共享文件")
+        print("   📱 API接口: 完整的共享文件管理REST API")
+        
         # 启动应用
         logger.info("正在启动Flask应用...")
         app.run(

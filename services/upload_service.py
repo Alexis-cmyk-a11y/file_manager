@@ -76,6 +76,10 @@ class UploadService:
             if not FileUtils.is_safe_path(target_directory):
                 raise ValueError("目标目录路径不安全")
             
+            # 处理空路径，使用当前工作目录
+            if not target_directory or target_directory == '':
+                target_directory = '.'
+            
             # 检查目标目录是否存在
             if not os.path.exists(target_directory):
                 os.makedirs(target_directory, exist_ok=True)
@@ -143,6 +147,10 @@ class UploadService:
             # 安全检查
             if not FileUtils.is_safe_path(target_directory):
                 raise ValueError("目标目录路径不安全")
+            
+            # 处理空路径，使用当前工作目录
+            if not target_directory or target_directory == '':
+                target_directory = '.'
             
             # 检查目标目录是否存在
             if not os.path.exists(target_directory):

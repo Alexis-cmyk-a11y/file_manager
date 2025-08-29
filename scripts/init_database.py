@@ -48,6 +48,12 @@ def create_database():
             # 创建系统配置表
             create_system_configs_table(cursor)
             
+            # 创建用户个人空间表
+            create_user_spaces_table(cursor)
+            
+            # 创建共享文件表
+            create_shared_files_table(cursor)
+            
             # 创建索引
             create_indexes(cursor)
             
@@ -81,13 +87,12 @@ def create_files_table(cursor):
         modified_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         is_directory BOOLEAN DEFAULT FALSE,
         parent_path VARCHAR(1000),
-        permissions VARCHAR(10),
         owner VARCHAR(100),
-        group_name VARCHAR(100),
         INDEX idx_file_path (file_path(191)),
         INDEX idx_file_name (file_name),
         INDEX idx_created_time (created_time),
         INDEX idx_modified_time (modified_time),
+        INDEX idx_owner (owner),
         UNIQUE KEY uk_file_path (file_path(191))
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """
@@ -158,6 +163,45 @@ def create_system_configs_table(cursor):
     """
     cursor.execute(sql)
     print("✅ 系统配置表创建成功")
+
+def create_user_spaces_table(cursor):
+    """创建用户个人空间表"""
+    sql = """
+    CREATE TABLE IF NOT EXISTS user_spaces (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        user_id BIGINT NOT NULL,
+        username VARCHAR(100) NOT NULL,
+        space_path VARCHAR(1000) NOT NULL,
+        created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_username (username),
+        INDEX idx_space_path (space_path(191)),
+        UNIQUE KEY uk_user_id (user_id),
+        UNIQUE KEY uk_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """
+    cursor.execute(sql)
+    print("✅ 用户个人空间表创建成功")
+
+def create_shared_files_table(cursor):
+    """创建共享文件表"""
+    sql = """
+    CREATE TABLE IF NOT EXISTS shared_files (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        original_file_path VARCHAR(1000) NOT NULL,
+        shared_file_path VARCHAR(1000) NOT NULL,
+        owner_username VARCHAR(100) NOT NULL,
+        shared_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE,
+        INDEX idx_original_path (original_file_path(191)),
+        INDEX idx_shared_path (shared_file_path(191)),
+        INDEX idx_owner (owner_username),
+        INDEX idx_is_active (is_active),
+        UNIQUE KEY uk_shared_path (shared_file_path(191))
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """
+    cursor.execute(sql)
+    print("✅ 共享文件表创建成功")
 
 def create_indexes(cursor):
     """创建额外的索引"""
@@ -247,6 +291,8 @@ def main():
         print("   - file_operations (文件操作日志表)")
         print("   - user_sessions (用户会话表)")
         print("   - system_configs (系统配置表)")
+        print("   - user_spaces (用户个人空间表)")
+        print("   - shared_files (共享文件表)")
         print("\n🔧 下一步:")
         print("   1. 启动文件管理系统: python main.py")
         print("   2. 访问: http://localhost:8888")

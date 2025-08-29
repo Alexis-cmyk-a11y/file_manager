@@ -14,7 +14,7 @@ class Config:
     
     def __init__(self):
         # 根目录配置
-        self.ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath('C:\\Users\\l\\repo\\file_manager\\root-data')))
         
         # 使用新的配置管理器
         self.config_manager = config_manager

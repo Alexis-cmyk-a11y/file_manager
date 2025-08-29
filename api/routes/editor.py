@@ -9,6 +9,7 @@ from flask_limiter.util import get_remote_address
 from services.editor_service import EditorService
 from services.security_service import SecurityService
 from utils.auth_middleware import require_auth_api, get_current_user
+
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,7 +18,7 @@ bp = Blueprint('editor', __name__, url_prefix='/api/editor')
 @bp.route('/open', methods=['POST'])
 @require_auth_api
 def open_file():
-    """打开文件进行编辑"""
+    """打开文件进行编辑（需要读取权限）"""
     try:
         data = request.get_json()
         if not data:
@@ -48,7 +49,7 @@ def open_file():
 @bp.route('/save', methods=['POST'])
 @require_auth_api
 def save_file():
-    """保存文件内容"""
+    """保存文件内容（需要读取和写入权限）"""
     try:
         data = request.get_json()
         if not data:
@@ -77,7 +78,7 @@ def save_file():
 @bp.route('/preview', methods=['GET'])
 @require_auth_api
 def preview_file():
-    """获取文件预览"""
+    """获取文件预览（需要读取权限）"""
     try:
         file_path = request.args.get('path', '')
         max_lines = request.args.get('max_lines', 100, type=int)
@@ -100,28 +101,25 @@ def preview_file():
 @bp.route('/search', methods=['POST'])
 @require_auth_api
 def search_in_file():
-    """在文件中搜索文本"""
+    """在文件中搜索内容（需要读取权限）"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'message': '无效的请求数据'}), 400
         
         file_path = data.get('path', '')
-        search_term = data.get('search_term', '')
+        search_text = data.get('search_text', '')
         case_sensitive = data.get('case_sensitive', False)
         
-        if not file_path:
-            return jsonify({'success': False, 'message': '文件路径不能为空'}), 400
-        
-        if not search_term:
-            return jsonify({'success': False, 'message': '搜索词不能为空'}), 400
+        if not file_path or not search_text:
+            return jsonify({'success': False, 'message': '文件路径和搜索文本不能为空'}), 400
         
         # 获取当前用户信息
         current_user = get_current_user()
-        logger.info(f"用户 {current_user['email']} 在文件中搜索: {file_path}, 关键词: {search_term}")
+        logger.info(f"用户 {current_user['email']} 在文件中搜索: {file_path}, 搜索文本: {search_text}")
         
         editor_service = EditorService()
-        result = editor_service.search_in_file(file_path, search_term, case_sensitive)
+        result = editor_service.search_in_file(file_path, search_text, case_sensitive)
         return jsonify(result)
         
     except Exception as e:

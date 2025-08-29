@@ -140,7 +140,7 @@ class FileService:
                             file_count += 1
                             total_size += item_info['size']
             except PermissionError:
-                raise PermissionError("没有权限访问该目录")
+                raise PermissionError("目录访问被拒绝")
             
             # 按类型和名称排序
             items.sort(key=lambda x: (not x['is_directory'], x['name'].lower()))
@@ -294,6 +294,9 @@ class FileService:
             
             # 获取文件信息（用于日志记录）
             file_info = FileUtils.get_file_info(file_path)
+            
+            # 在删除源文件之前，检查并清理相关的共享文件
+            self._cleanup_related_shares(file_path)
             
             # 删除文件或目录
             if os.path.isdir(file_path):
@@ -623,3 +626,43 @@ class FileService:
                 duration_ms=duration_ms
             )
             raise
+    
+    def _cleanup_related_shares(self, file_path: str) -> None:
+        """
+        清理与源文件相关的共享文件
+        :param file_path: 源文件路径
+        """
+        try:
+            # 获取文件的绝对路径
+            abs_file_path = os.path.abspath(file_path)
+            
+            # 查询数据库，找到所有指向该文件的共享记录
+            if self.mysql_service and self.mysql_service.is_connected():
+                sql = """
+                SELECT shared_file_path, owner_username 
+                FROM shared_files 
+                WHERE original_file_path = %s AND is_active = TRUE
+                """
+                shared_records = self.mysql_service.execute_query(sql, (abs_file_path,))
+                
+                # 清理每个共享文件
+                for record in shared_records:
+                    shared_path = record['shared_file_path']
+                    owner = record['owner_username']
+                    
+                    try:
+                        # 如果共享文件仍然存在，删除它
+                        if os.path.exists(shared_path):
+                            os.remove(shared_path)
+                            logger.info(f"删除共享文件: {shared_path}")
+                        
+                        # 更新数据库记录为非活跃状态
+                        update_sql = "UPDATE shared_files SET is_active = FALSE WHERE shared_file_path = %s"
+                        self.mysql_service.execute_update(update_sql, (shared_path,))
+                        logger.info(f"更新共享文件记录为非活跃状态: {shared_path}")
+                        
+                    except Exception as e:
+                        logger.error(f"清理共享文件失败: {shared_path}, 错误: {e}")
+                        
+        except Exception as e:
+            logger.error(f"清理相关共享文件失败: {e}")

@@ -8,6 +8,7 @@ from services.upload_service import UploadService
 from utils.logger import get_logger
 from utils.auth_middleware import require_auth_api, get_current_user
 
+
 logger = get_logger(__name__)
 bp = Blueprint('upload', __name__, url_prefix='/api')
 
@@ -20,7 +21,7 @@ def get_user_info():
 @bp.route('/upload', methods=['POST'])
 @require_auth_api
 def upload_file():
-    """上传单个文件"""
+    """上传单个文件（需要写入权限）"""
     try:
         if 'file' not in request.files:
             return jsonify({
@@ -68,7 +69,7 @@ def upload_file():
 @bp.route('/upload_multiple', methods=['POST'])
 @require_auth_api
 def upload_multiple_files():
-    """上传多个文件"""
+    """上传多个文件（需要写入权限）"""
     try:
         if 'files' not in request.files:
             return jsonify({
@@ -100,7 +101,7 @@ def upload_multiple_files():
             if validation['valid']:
                 valid_files.append(file)
             else:
-                logger.warning(f"文件验证失败: {file.filename} - {validation['error']}")
+                logger.warning(f"文件 {file.filename} 验证失败: {validation['error']}")
         
         if not valid_files:
             return jsonify({
@@ -108,10 +109,25 @@ def upload_multiple_files():
                 'message': '没有有效的文件可以上传'
             }), 400
         
-        # 上传文件
-        result = upload_service.upload_multiple_files(valid_files, target_directory, user_ip, user_agent)
+        # 批量上传文件
+        results = []
+        for file in valid_files:
+            try:
+                result = upload_service.upload_file(file, target_directory, user_ip, user_agent)
+                results.append(result)
+            except Exception as e:
+                logger.error(f"上传文件 {file.filename} 失败: {str(e)}")
+                results.append({
+                    'success': False,
+                    'filename': file.filename,
+                    'message': str(e)
+                })
         
-        return jsonify(result)
+        return jsonify({
+            'success': True,
+            'message': f'批量上传完成，共 {len(valid_files)} 个文件',
+            'results': results
+        })
         
     except Exception as e:
         logger.error(f"批量文件上传失败: {str(e)}")

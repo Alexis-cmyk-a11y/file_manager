@@ -23,7 +23,7 @@ def get_user_info():
 @bp.route('/list', methods=['GET'])
 @require_auth_api
 def list_directory():
-    """列出目录内容"""
+    """列出目录内容（需要读取权限）"""
     try:
         directory_path = request.args.get('path', '.')
         # 处理前端传递的空字符串
@@ -51,7 +51,7 @@ def list_directory():
 @bp.route('/info', methods=['GET'])
 @require_auth_api
 def get_file_info():
-    """获取文件信息"""
+    """获取文件信息（需要读取权限）"""
     try:
         file_path = request.args.get('path', '')
         if not file_path:
@@ -81,7 +81,7 @@ def get_file_info():
 @bp.route('/create_folder', methods=['POST'])
 @require_auth_api
 def create_folder():
-    """创建文件夹"""
+    """创建文件夹（需要写入权限）"""
     try:
         data = request.get_json()
         if not data or 'path' not in data or 'name' not in data:
@@ -120,7 +120,7 @@ def create_folder():
 @bp.route('/delete', methods=['DELETE'])
 @require_auth_api
 def delete_file():
-    """删除文件或目录"""
+    """删除文件或目录（需要删除权限）"""
     try:
         data = request.get_json()
         if not data or 'path' not in data:
@@ -151,7 +151,7 @@ def delete_file():
 @bp.route('/rename', methods=['PUT'])
 @require_auth_api
 def rename_file():
-    """重命名文件或目录"""
+    """重命名文件或目录（需要读取和写入权限）"""
     try:
         data = request.get_json()
         if not data or 'old_path' not in data or 'new_name' not in data:
@@ -183,7 +183,7 @@ def rename_file():
 @bp.route('/move', methods=['PUT'])
 @require_auth_api
 def move_file():
-    """移动文件或目录"""
+    """移动文件或目录（需要读取和写入权限）"""
     try:
         data = request.get_json()
         if not data or 'source_path' not in data or 'target_path' not in data:
@@ -215,7 +215,7 @@ def move_file():
 @bp.route('/copy', methods=['POST'])
 @require_auth_api
 def copy_file():
-    """复制文件或目录"""
+    """复制文件或目录（需要读取和写入权限）"""
     try:
         data = request.get_json()
         if not data or 'source_path' not in data or 'target_path' not in data:
@@ -247,7 +247,7 @@ def copy_file():
 @bp.route('/search', methods=['GET'])
 @require_auth_api
 def search_files():
-    """搜索文件"""
+    """搜索文件（需要读取权限）"""
     try:
         search_path = request.args.get('path', '.')
         query = request.args.get('q', '')

@@ -254,9 +254,7 @@ class MySQLService:
             modified_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             is_directory BOOLEAN DEFAULT FALSE,
             parent_path VARCHAR(1000),
-            permissions VARCHAR(10),
             owner VARCHAR(100),
-            group_name VARCHAR(100),
             INDEX idx_file_path (file_path(255)),
             INDEX idx_file_name (file_name),
             INDEX idx_created_time (created_time),
@@ -362,12 +360,11 @@ class MySQLService:
         sql = """
         INSERT INTO files 
         (file_path, file_name, file_size, file_type, mime_type, hash_value, 
-         is_directory, parent_path, permissions, owner, group_name)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+         is_directory, parent_path, owner)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
         file_size = VALUES(file_size),
-        modified_time = CURRENT_TIMESTAMP,
-        permissions = VALUES(permissions)
+        modified_time = CURRENT_TIMESTAMP
         """
         try:
             # 添加调试日志
@@ -382,9 +379,7 @@ class MySQLService:
                 file_info.get('hash_value'),
                 file_info.get('is_directory', False),
                 file_info.get('parent_path'),
-                file_info.get('permissions'),
-                file_info.get('owner'),
-                file_info.get('group_name')
+                file_info.get('owner')
             ))
             
             logger.info(f"文件信息保存成功: {file_info.get('file_path')}, 影响行数: {result}")

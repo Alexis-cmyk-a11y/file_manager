@@ -3,169 +3,570 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件管理系统</title>
+    <title>文件管理系统 - 智能文件管理解决方案</title>
+    <meta name="description" content="高效、安全、智能的文件管理系统，支持在线编辑、版本控制、协作管理">
+    <meta name="keywords" content="文件管理,在线编辑,版本控制,协作管理,云存储">
+    
     <!-- 角标设置 -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- 样式文件 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome-all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/local-fonts.css') }}">
+    
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="{{ url_for('static', filename='js/modern-script-complete.js') }}" as="script" crossorigin>
+    <link rel="preload" href="{{ url_for('static', filename='css/modern-style.css') }}" as="style">
+    
+    <!-- 自定义样式 -->
     <style>
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
+        /* 文件夹交互样式 */
+        .clickable-folder {
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
         
-        .header-left {
-            flex: 1;
+        .clickable-folder:hover {
+            background-color: rgba(255, 193, 7, 0.08) !important;
+            transform: translateX(1px);
         }
         
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        .clickable-folder:active {
+            transform: translateX(0px);
         }
         
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #6b7280;
+        /* 文件夹图标样式 */
+        .folder-icon {
+            color: #ffc107;
+            font-size: 1.1em;
+        }
+        
+        .folder-name {
+            color: #495057;
             font-weight: 500;
         }
         
-        .user-info i {
-            font-size: 1.2rem;
-            color: #667eea;
+        /* 文件图标样式 */
+        .file-icon {
+            color: #6c757d;
         }
         
-        .logout-btn {
+        /* 特定文件类型图标颜色 */
+        .fa-file-pdf { color: #dc3545; }
+        .fa-file-word { color: #007bff; }
+        .fa-file-excel { color: #28a745; }
+        .fa-file-powerpoint { color: #fd7e14; }
+        .fa-file-image { color: #e83e8c; }
+        .fa-file-audio { color: #6f42c1; }
+        .fa-file-video { color: #fd7e14; }
+        .fa-file-code { color: #17a2b8; }
+        .fa-file-archive { color: #6c757d; }
+        .fa-file-alt { color: #495057; }
+        
+        /* 文件夹操作按钮样式 */
+        .folder-action {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+            border-color: #ffc107 !important;
+        }
+        
+        .folder-action:hover {
+            background-color: #e0a800 !important;
+            border-color: #d39e00 !important;
+        }
+        
+        /* 文件行悬停效果 */
+        .file-row:hover {
+            background-color: rgba(0, 123, 255, 0.03);
+        }
+        
+
+        
+        /* 文件信息布局 */
+        .file-info {
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            border-radius: 50%;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        
+        /* 收藏按钮在文件名左侧的样式 */
+        .file-info .favorite-btn {
+            padding: 6px 8px;
+            min-width: auto;
+            margin-right: 4px;
+            flex-shrink: 0;
+        }
+        
+        .file-info .favorite-btn i {
+            font-size: 12px;
+        }
+        
+        .folder-info {
+            font-weight: 500;
+        }
+        
+        /* 操作按钮样式 */
+        .action-btn {
+            transition: all 0.2s ease;
+            margin: 0 2px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
         
-        .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        .action-btn.primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
             color: white;
         }
         
-        .logout-btn i {
-            font-size: 1rem;
+        .action-btn.primary:hover {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+        
+        .action-btn.secondary {
+            background: #ffffff;
+            color: #475569;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .action-btn.secondary:hover {
+            background: #f1f5f9;
+            border-color: #6366f1;
+            color: #6366f1;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2);
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* 工具栏按钮布局优化 */
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .action-buttons .action-btn {
+            min-width: 120px;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        
+        .action-buttons .action-btn span {
+            font-size: 13px;
+        }
+        
+        /* 工具栏整体样式 */
+        .toolbar-section {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 0;
+            margin-bottom: 20px;
+        }
+        
+        .toolbar-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+        }
+        
+        /* 文件夹行特殊样式 - 更微妙的背景 */
+        .file-row.folder {
+            background-color: rgba(255, 193, 7, 0.03);
+            border-left: 3px solid transparent;
+        }
+        
+        .file-row.folder:hover {
+            background-color: rgba(255, 193, 7, 0.08);
+            border-left-color: #ffc107;
+        }
+        
+        /* 普通文件行样式 */
+        .file-row.file {
+            border-left: 3px solid transparent;
+        }
+        
+        .file-row.file:hover {
+            border-left-color: #6c757d;
+        }
+        
+        /* 文件上下文菜单样式 */
+        .file-context-menu {
+            animation: fadeInUp 0.2s ease-out;
+        }
+        
+        .file-context-menu .menu-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .file-context-menu .menu-item.danger:hover {
+            background-color: #fef2f2;
+        }
+        
+        /* 文件树选择器样式 */
+        .file-tree-modal {
+            animation: fadeInScale 0.3s ease-out;
+        }
+        
+        .file-tree-modal .modal-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+        .file-tree-modal .modal-header h3 {
+            font-weight: 600;
+        }
+        
+        .file-tree-modal .modal-header p {
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+        
+        #file-tree-container {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        #file-tree-container > div {
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+        }
+        
+        #file-tree-container > div:last-child {
+            border-bottom: none;
+        }
+        
+        #file-tree-container > div:hover {
+            background-color: #f8f9fa;
+            transform: translateX(2px);
+        }
+        
+        #file-tree-container > div:active {
+            transform: translateX(1px);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        /* 更多操作按钮悬停效果 */
+        .file-actions .action-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
     </style>
 </head>
 <body>
-    <!-- 加载指示器 -->
-    <div id="loading-indicator">
-        <div class="spinner"></div>
-        <span>加载中...</span>
+    <!-- 页面加载指示器 -->
+    <div id="loading-indicator" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">
+                <h3>正在加载文件管理系统</h3>
+                <p>请稍候，正在初始化系统组件...</p>
+            </div>
+        </div>
     </div>
     
     <!-- 通知容器 -->
-    <div id="notification-container"></div>
+    <div id="notification-container" class="notification-container"></div>
     
-    <div class="container compact-container">
-        <header class="compact-header">
-            <div class="header-content">
+    <!-- 主应用容器 -->
+    <div class="app-container">
+        <!-- 顶部导航栏 -->
+        <header class="app-header">
+            <div class="header-container">
                 <div class="header-left">
-                    <h1>文件管理系统</h1>
-                    <p class="header-subtitle">高效、安全、易用的文件管理解决方案</p>
-                </div>
-                <div class="header-right">
-                    <div class="user-info">
-                        <i class="fas fa-user-circle"></i>
-                        <span id="user-email">{{ session.email if session.email else '用户' }}</span>
+                    <div class="logo-section">
+                        <div class="logo-icon">
+                            <i class="fas fa-folder-tree"></i>
+                        </div>
+                        <div class="logo-text">
+                            <h1 class="app-title">文件管理系统</h1>
+                            <p class="app-subtitle">智能 · 高效 · 安全</p>
+                        </div>
                     </div>
-                    <div class="user-actions">
-                        <button class="logout-btn" title="退出登录" onclick="handleLogout()">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
+                </div>
+                
+                <div class="header-center">
+                    <div class="search-container">
+                        <div class="search-box">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="global-search" placeholder="搜索文件、文件夹..." class="search-input">
+                            <button class="search-clear" id="search-clear" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="search-suggestions" id="search-suggestions"></div>
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <div class="user-section">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                            <div class="user-details">
+                                <span class="user-name" id="user-name">{{ session.email if session.email else '用户' }}</span>
+                                <span class="user-role">管理员</span>
+                            </div>
+                        </div>
+                        
+                        <div class="user-actions">
+                            <!-- 通知中心功能已移除 -->
+                            <button class="action-btn logout-btn" title="退出登录" onclick="handleLogout()">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </header>
 
-        <main>
-            <div class="file-explorer">
-                <div class="breadcrumb-container compact-breadcrumb">
-                    <div class="breadcrumb-header">
-                        <i class="fas fa-folder-open"></i>
-                        <span>当前位置</span>
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 侧边栏 -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3>快速导航</h3>
+                    <button class="sidebar-toggle" id="sidebar-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <ul class="nav-menu">
+                        <li class="nav-item active">
+                            <a href="#" class="nav-link" data-view="files">
+                                <i class="fas fa-folder"></i>
+                                <span>文件管理</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-view="recent">
+                                <i class="fas fa-clock"></i>
+                                <span>最近文件</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-view="favorites">
+                                <i class="fas fa-star"></i>
+                                <span>收藏夹</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/shared" class="nav-link" data-view="shared">
+                                <i class="fas fa-share-alt"></i>
+                                <span>共享文件</span>
+                            </a>
+                        </li>
+
+                    </ul>
+                </nav>
+                
+                <div class="sidebar-footer">
+                    <div class="storage-info">
+                        <div class="storage-header">
+                            <i class="fas fa-hdd"></i>
+                            <span>存储空间</span>
+                        </div>
+                        <div class="storage-bar">
+                            <div class="storage-progress" id="storage-progress"></div>
+                        </div>
+                        <div class="storage-text">
+                            <span id="storage-used">0 GB</span>
+                            <span>/</span>
+                            <span id="storage-total">100 GB</span>
+                        </div>
                     </div>
-                    <ol class="breadcrumb" id="breadcrumb">
-                        <li class="breadcrumb-item"><a href="#" data-path=""><i class="fas fa-home"></i> 根目录</a></li>
-                    </ol>
+                </div>
+            </aside>
+
+            <!-- 主工作区 -->
+            <div class="workspace">
+                <!-- 面包屑导航 -->
+                <div class="breadcrumb-section">
+                    <div class="breadcrumb-container">
+                        <div class="breadcrumb-header">
+                            <i class="fas fa-folder-open"></i>
+                            <span>当前位置</span>
+                        </div>
+                        <nav class="breadcrumb-nav">
+                            <ol class="breadcrumb" id="breadcrumb">
+                                <li class="breadcrumb-item">
+                                    <a href="#" data-path="" class="breadcrumb-link">
+                                        <i class="fas fa-home"></i>
+                                        <span>根目录</span>
+                                    </a>
+                                </li>
+                            </ol>
+                        </nav>
+                    </div>
                 </div>
 
-                <div class="actions compact-actions">
-                    <div class="action-group">
-                        <button id="upload-btn" class="action-btn primary">
-                            <i class="fas fa-upload"></i> 上传文件
-                        </button>
-                        <button id="new-folder-btn" class="action-btn secondary">
-                            <i class="fas fa-folder-plus"></i> 新建文件夹
-                        </button>
-                        <button id="download-web-btn" class="action-btn secondary">
-                            <i class="fas fa-download"></i> 网络下载
-                        </button>
+                <!-- 工具栏 -->
+                <div class="toolbar-section">
+                    <div class="toolbar-container">
+                        <div class="toolbar-left">
+                            <!-- 视图控制和排序功能已移除 -->
+                        </div>
+                        
+                        <div class="toolbar-right">
+                            <div class="action-buttons">
+                                <button id="upload-btn" class="action-btn primary" title="上传文件">
+                                    <i class="fas fa-upload"></i>
+                                    <span>上传文件</span>
+                                </button>
+                                <button id="new-folder-btn" class="action-btn secondary" title="新建文件夹">
+                                    <i class="fas fa-folder-plus"></i>
+                                    <span>新建文件夹</span>
+                                </button>
+                                <button id="web-download-btn" class="action-btn secondary" title="网络下载">
+                                    <i class="fas fa-download"></i>
+                                    <span>网络下载</span>
+                                </button>
+
+                            </div>
+                        </div>
                     </div>
-                    <input type="file" id="file-upload" style="display: none;" multiple>
                 </div>
 
-                <div class="file-list-container">
-                    <div class="file-stats">
-                        <span class="file-count">共 <span id="total-files">0</span> 个项目</span>
-                        <span class="storage-info">存储空间: <span id="total-size">0 B</span></span>
+                <!-- 文件列表区域 -->
+                <div class="file-list-section">
+                    <div class="file-list-container">
+                        <!-- 文件统计信息 -->
+                        <div class="file-stats">
+                            <div class="stats-item">
+                                <i class="fas fa-file"></i>
+                                <span>文件: <strong id="file-count">0</strong></span>
+                            </div>
+                            <div class="stats-item">
+                                <i class="fas fa-folder"></i>
+                                <span>文件夹: <strong id="folder-count">0</strong></span>
+                            </div>
+                            <div class="stats-item">
+                                <i class="fas fa-hdd"></i>
+                                <span>总大小: <strong id="total-size">0 B</strong></span>
+                            </div>
+                            <div class="stats-item">
+                                <i class="fas fa-clock"></i>
+                                <span>最后更新: <strong id="last-update">刚刚</strong></span>
+                            </div>
+                        </div>
+                        
+                        <!-- 文件列表表格 -->
+                        <div class="file-table-container">
+                            <table class="file-table" id="file-table">
+                                <thead>
+                                    <tr>
+                                        <th class="name-col">
+                                            <i class="fas fa-file"></i>
+                                            <span>名称</span>
+                                        </th>
+                                        <th class="size-col">
+                                            <i class="fas fa-weight-hanging"></i>
+                                            <span>大小</span>
+                                        </th>
+                                        <th class="type-col">
+                                            <i class="fas fa-tag"></i>
+                                            <span>类型</span>
+                                        </th>
+                                        <th class="date-col">
+                                            <i class="fas fa-calendar"></i>
+                                            <span>修改时间</span>
+                                        </th>
+                                        <th class="actions-col">
+                                            <i class="fas fa-cogs"></i>
+                                            <span>操作</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="file-list">
+                                    <!-- 文件列表将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 空状态显示 -->
+                        <div class="empty-state" id="empty-state" style="display: none;">
+                            <div class="empty-icon">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <h3>当前目录为空</h3>
+                            <p>您可以上传文件或创建新文件夹来开始使用</p>
+                            <div class="empty-actions">
+                                <button class="action-btn primary" onclick="document.getElementById('upload-btn').click()">
+                                    <i class="fas fa-upload"></i>
+                                    <span>上传文件</span>
+                                </button>
+                                <button class="action-btn secondary" onclick="document.getElementById('new-folder-btn').click()">
+                                    <i class="fas fa-folder-plus"></i>
+                                    <span>新建文件夹</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <table class="file-list" id="file-table">
-                        <thead>
-                            <tr>
-                                <th class="name-col">
-                                    <i class="fas fa-file"></i> 名称
-                                </th>
-                                <th class="size-col">
-                                    <i class="fas fa-weight-hanging"></i> 大小
-                                </th>
-                                <th class="date-col">
-                                    <i class="fas fa-calendar"></i> 修改时间
-                                </th>
-                                <th class="actions-col">
-                                    <i class="fas fa-cogs"></i> 操作
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="file-list">
-                            <!-- 文件列表将通过JavaScript动态生成 -->
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- 隐藏的文件上传输入 -->
+    <input type="file" id="file-upload" style="display: none;" multiple>
+
+    <!-- 模态框组件 -->
+    
     <!-- 新建文件夹模态框 -->
     <div class="modal" id="new-folder-modal">
         <div class="modal-header">
             <h3><i class="fas fa-folder-plus"></i> 新建文件夹</h3>
+            <button class="modal-close" onclick="hideNewFolderModal()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <div class="modal-body">
             <div class="input-group">
                 <label for="new-folder-name">文件夹名称</label>
                 <input type="text" id="new-folder-name" placeholder="请输入文件夹名称" autocomplete="off">
+                <div class="input-hint">支持中文、英文、数字和下划线</div>
             </div>
         </div>
         <div class="modal-actions">
@@ -178,11 +579,15 @@
     <div class="modal" id="rename-modal">
         <div class="modal-header">
             <h3><i class="fas fa-edit"></i> 重命名</h3>
+            <button class="modal-close" onclick="hideRenameModal()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <div class="modal-body">
             <div class="input-group">
                 <label for="rename-input">新名称</label>
                 <input type="text" id="rename-input" placeholder="请输入新名称" autocomplete="off">
+                <div class="input-hint">请确保名称不包含特殊字符</div>
             </div>
         </div>
         <div class="modal-actions">
@@ -195,11 +600,18 @@
     <div class="modal" id="move-copy-modal">
         <div class="modal-header">
             <h3 id="move-copy-title"><i class="fas fa-exchange-alt"></i> 移动/复制</h3>
+            <button class="modal-close" onclick="hideMoveCopyModal()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <div class="modal-body">
             <div class="folder-tree-container">
                 <div class="tree-header">
-                    <i class="fas fa-sitemap"></i> 选择目标文件夹
+                    <i class="fas fa-sitemap"></i>
+                    <span>选择目标文件夹</span>
+                </div>
+                <div class="tree-search">
+                    <input type="text" id="tree-search" placeholder="搜索文件夹..." class="tree-search-input">
                 </div>
                 <ul id="folder-tree" class="folder-tree">
                     <!-- 文件夹树将通过JavaScript动态生成 -->
@@ -216,17 +628,26 @@
     <div class="modal" id="web-download-modal">
         <div class="modal-header">
             <h3><i class="fas fa-download"></i> 网络文件下载</h3>
+            <button class="modal-close" onclick="hideWebDownloadModal()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <div class="modal-body">
             <div class="input-group">
                 <label for="web-download-url">下载链接</label>
                 <input type="url" id="web-download-url" placeholder="请输入要下载的文件链接 (http:// 或 https://)" autocomplete="off">
+                <div class="input-hint">支持HTTP和HTTPS链接</div>
             </div>
             <div class="input-group">
                 <label for="web-download-filename">文件名 (可选)</label>
                 <input type="text" id="web-download-filename" placeholder="留空将自动从链接中提取文件名" autocomplete="off">
+                <div class="input-hint">建议指定文件名以确保下载成功</div>
             </div>
             <div class="download-progress" id="download-progress" style="display: none;">
+                <div class="progress-header">
+                    <span>下载进度</span>
+                    <span class="progress-percentage" id="progress-percentage">0%</span>
+                </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill"></div>
                 </div>
@@ -239,185 +660,56 @@
         </div>
     </div>
 
-    <!-- 下载文件列表模态框 -->
-    <div class="modal" id="downloaded-files-modal">
-        <div class="modal-header">
-            <h3><i class="fas fa-list"></i> 已下载文件</h3>
-        </div>
-        <div class="modal-body">
-            <div class="downloaded-files-list" id="downloaded-files-list">
-                <!-- 文件列表将通过JavaScript动态生成 -->
+    <!-- 系统设置功能已移除 -->
+
+    <!-- 确认对话框 -->
+    <div class="confirm-dialog" id="confirm-dialog" style="display: none;">
+        <div class="confirm-content">
+            <div class="confirm-icon">
+                <i class="fas fa-question-circle"></i>
             </div>
-        </div>
-        <div class="modal-actions">
-            <button id="refresh-files-btn" class="btn-secondary">刷新列表</button>
-            <button id="close-files-btn" class="btn-primary">关闭</button>
+            <h3 id="confirm-title">确认操作</h3>
+            <p id="confirm-message">您确定要执行此操作吗？</p>
+            <div class="confirm-actions">
+                <button class="btn-secondary" id="confirm-cancel">取消</button>
+                <button class="btn-primary" id="confirm-ok">确认</button>
+            </div>
         </div>
     </div>
 
+    <!-- 遮罩层 -->
     <div class="overlay" id="overlay"></div>
 
-            <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='3.0') }}"></script>
-            <script>
-                // 处理登出
-                async function handleLogout() {
-                    try {
-                        // 显示确认对话框
-                        if (!confirm('确定要退出登录吗？')) {
-                            return;
-                        }
-                        
-                        // 调用登出API
-                        const response = await fetch('/logout', {
-                            method: 'GET',
-                            credentials: 'same-origin'
-                        });
-                        
-                        if (response.ok) {
-                            // 登出成功，重定向到登录页面
-                            window.location.href = '/login';
-                        } else {
-                            // 如果API调用失败，直接重定向
-                            console.warn('登出API调用失败，直接重定向');
-                            window.location.href = '/login';
-                        }
-                    } catch (error) {
-                        console.error('登出过程中发生错误:', error);
-                        // 发生错误时，直接重定向到登录页面
-                        window.location.href = '/login';
-                    }
-                }
-                
-                // 页面加载完成后初始化
-                document.addEventListener('DOMContentLoaded', function() {
-                    console.log('文件管理系统首页加载完成');
-                    initializeWebDownload();
-                });
+    <!-- JavaScript文件 -->
+    <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='4.0') }}"></script>
+    
+    <!-- 页面初始化脚本 -->
+    <script>
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('文件管理系统重构版页面加载完成');
+            
+            // 初始化各个功能模块
+            initializeSearch();
+            // 通知中心功能已移除
+            initializeWebDownload();
+            initializeStorageInfo();
+            
+            // 显示欢迎消息
+            setTimeout(() => {
+                showNotification('欢迎使用重构版文件管理系统！', 'success');
+            }, 1000);
+        });
 
-                // 初始化网络下载功能
-                function initializeWebDownload() {
-                    const downloadWebBtn = document.getElementById('download-web-btn');
-                    const webDownloadModal = document.getElementById('web-download-modal');
-                    const startDownloadBtn = document.getElementById('start-download-btn');
-                    const cancelDownloadBtn = document.getElementById('cancel-download-btn');
-                    const webDownloadUrl = document.getElementById('web-download-url');
-                    const webDownloadFilename = document.getElementById('web-download-filename');
-                    const downloadProgress = document.getElementById('download-progress');
-                    const progressFill = document.getElementById('progress-fill');
-                    const progressText = document.getElementById('progress-text');
-
-                    // 打开网络下载模态框
-                    downloadWebBtn.addEventListener('click', function() {
-                        webDownloadModal.style.display = 'block';
-                        document.getElementById('overlay').style.display = 'block';
-                        webDownloadUrl.focus();
-                    });
-
-                    // 取消下载
-                    cancelDownloadBtn.addEventListener('click', function() {
-                        webDownloadModal.style.display = 'none';
-                        document.getElementById('overlay').style.display = 'none';
-                        downloadProgress.style.display = 'none';
-                        webDownloadUrl.value = '';
-                        webDownloadFilename.value = '';
-                    });
-
-                    // 开始下载
-                    startDownloadBtn.addEventListener('click', async function() {
-                        const url = webDownloadUrl.value.trim();
-                        const filename = webDownloadFilename.value.trim();
-
-                        if (!url) {
-                            showNotification('请输入下载链接', 'error');
-                            return;
-                        }
-
-                        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                            showNotification('请输入有效的HTTP或HTTPS链接', 'error');
-                            return;
-                        }
-
-                        // 显示进度条
-                        downloadProgress.style.display = 'block';
-                        progressFill.style.width = '0%';
-                        progressText.textContent = '正在下载...';
-                        startDownloadBtn.disabled = true;
-
-                        try {
-                            const response = await fetch('/api/download_web_file', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    url: url,
-                                    filename: filename || ''
-                                })
-                            });
-
-                            const result = await response.json();
-
-                            if (result.success) {
-                                showNotification(result.message, 'success');
-                                progressFill.style.width = '100%';
-                                progressText.textContent = '下载完成！';
-                                
-                                // 延迟关闭模态框
-                                setTimeout(() => {
-                                    webDownloadModal.style.display = 'none';
-                                    document.getElementById('overlay').style.display = 'none';
-                                    downloadProgress.style.display = 'none';
-                                    webDownloadUrl.value = '';
-                                    webDownloadFilename.value = '';
-                                    startDownloadBtn.disabled = false;
-                                }, 2000);
-                            } else {
-                                showNotification(result.message, 'error');
-                                progressText.textContent = '下载失败';
-                                startDownloadBtn.disabled = false;
-                            }
-                        } catch (error) {
-                            console.error('下载失败:', error);
-                            showNotification('下载过程中发生错误', 'error');
-                            progressText.textContent = '下载失败';
-                            startDownloadBtn.disabled = false;
-                        }
-                    });
-
-                    // 添加回车键支持
-                    webDownloadUrl.addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            startDownloadBtn.click();
-                        }
-                    });
-
-                    webDownloadFilename.addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            startDownloadBtn.click();
-                        }
-                    });
-                }
-
-                // 显示通知
-                function showNotification(message, type = 'info') {
-                    const container = document.getElementById('notification-container');
-                    const notification = document.createElement('div');
-                    notification.className = `notification ${type}`;
-                    notification.innerHTML = `
-                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                        <span>${message}</span>
-                        <button onclick="this.parentElement.remove()">&times;</button>
-                    `;
-                    
-                    container.appendChild(notification);
-                    
-                    // 自动移除通知
-                    setTimeout(() => {
-                        if (notification.parentElement) {
-                            notification.remove();
-                        }
-                    }, 5000);
-                }
-            </script>
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('文件管理系统重构版页面加载完成');
+            
+            // 显示欢迎消息
+            setTimeout(() => {
+                showNotification('欢迎使用重构版文件管理系统！', 'success');
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
