@@ -37,7 +37,7 @@ def list_directory():
         logger.info(f"用户 {current_user['email']} 列出目录: {directory_path}")
         
         file_service = FileService()
-        result = file_service.list_directory(directory_path, user_ip, user_agent)
+        result = file_service.list_directory(directory_path, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
@@ -67,7 +67,7 @@ def get_file_info():
         logger.info(f"用户 {current_user['email']} 获取文件信息: {file_path}")
         
         file_service = FileService()
-        result = file_service.get_file_info(file_path, user_ip, user_agent)
+        result = file_service.get_file_info(file_path, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
@@ -106,7 +106,7 @@ def create_folder():
         logger.info(f"用户 {current_user['email']} 创建文件夹: {directory_path}")
         
         file_service = FileService()
-        result = file_service.create_directory(directory_path, user_ip, user_agent)
+        result = file_service.create_directory(directory_path, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
@@ -137,7 +137,7 @@ def delete_file():
         logger.info(f"用户 {current_user['email']} 删除文件/目录: {file_path}")
         
         file_service = FileService()
-        result = file_service.delete_file(file_path, user_ip, user_agent)
+        result = file_service.delete_file(file_path, user_ip, user_agent, current_user)
         
         return jsonify(result)
         

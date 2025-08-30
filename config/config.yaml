@@ -51,25 +51,7 @@ environments:
       max_path_length: 4096
       max_concurrent_uploads: 10
       
-  testing:
-    debug: true
-    log_level: DEBUG
-    server:
-      host: "127.0.0.1"
-      port: 8889
-      workers: 1
-      timeout: 30
-    features:
-      enable_performance_monitoring: false
-      enable_security_logging: false
-      enable_cache: false
-      enable_compression: false
-      enable_debug_toolbar: true
-    limits:
-      max_file_size: 104857600  # 100MB
-      max_upload_files: 10
-      max_path_length: 1024
-      max_concurrent_uploads: 2
+
 
 # 数据库配置
 database:

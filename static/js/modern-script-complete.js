@@ -1,6 +1,7 @@
 // 重构版文件管理系统 JavaScript
 let currentPath = '.';  // 初始化为根目录，而不是空字符串
 let currentView = 'list';
+let currentUser = null;  // 当前用户信息
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,24 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // 检查剪贴板支持情况
     const clipboardSupport = checkClipboardSupport();
     
-    // 测试API连接
-    testAPIConnection().then((apiAvailable) => {
-        if (apiAvailable) {
-            currentView = 'files';
-            loadFileList();
-            updateBreadcrumb();
-        } else {
-            console.warn('API不可用，使用模拟数据');
-            showNotification('API不可用，已切换到演示模式', 'warning');
-            currentView = 'files';
-            loadMockData();
-            updateBreadcrumb();
-        }
+    // 直接加载文件列表
+    currentView = 'files';
+    // 获取当前用户信息并设置正确的初始路径
+    getCurrentUserInfo().then(() => {
+        loadFileList();
+        updateBreadcrumb();
     }).catch((error) => {
-        console.error('API连接测试失败:', error);
-        showNotification('系统初始化失败，已切换到演示模式', 'warning');
-        currentView = 'files';
-        loadMockData();
+        console.error('获取用户信息失败:', error);
+        currentPath = '.';
+        loadFileList();
         updateBreadcrumb();
     });
     
@@ -43,70 +36,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 });
 
-// 测试API连接
-async function testAPIConnection() {
+
+
+// 获取当前用户信息并设置正确的初始路径
+async function getCurrentUserInfo() {
     try {
-        console.log('正在测试API连接...');
+        console.log('正在获取当前用户信息...');
         
-        // 测试健康检查端点
-        const healthResponse = await fetch('/api/health');
-        console.log('健康检查响应:', healthResponse.status, healthResponse.statusText);
-        
-        if (healthResponse.ok) {
-            const healthData = await healthResponse.json();
-            console.log('系统健康状态:', healthData);
-            showNotification('系统连接正常', 'success');
-            return true;
+        // 尝试获取用户信息
+                       const response = await fetch('/api/auth/user/info');
+        if (response.ok) {
+            const userData = await response.json();
+            currentUser = userData;
+            console.log('当前用户信息:', currentUser);
+            
+            // 如果不是管理员，设置初始路径为用户目录
+            if (currentUser && currentUser.user && currentUser.user.email !== 'admin@system.local') {
+                // 从邮箱提取用户名
+                const username = currentUser.user.email.split('@')[0];
+                currentPath = `home/users/${username}`;
+                console.log('设置普通用户初始路径:', currentPath);
+                
+                // 更新用户显示
+                updateUserDisplay(username, '用户');
+            } else {
+                currentPath = '.';  // 管理员使用根目录
+                console.log('设置管理员初始路径:', currentPath);
+                
+                // 更新用户显示
+                updateUserDisplay('admin', '管理员');
+            }
         } else {
-            console.warn('健康检查失败:', healthResponse.status);
-            return false;
+            console.warn('获取用户信息失败，使用默认路径');
+            currentPath = '.';
         }
         
     } catch (error) {
-        console.error('API连接测试失败:', error);
-        return false;
+        console.error('获取用户信息失败:', error);
+        currentPath = '.';
     }
 }
 
-// 加载模拟数据（当API不可用时）
-function loadMockData() {
-    console.log('加载模拟数据...');
+// 更新用户显示
+function updateUserDisplay(username, role) {
+    const userNameElement = document.getElementById('user-name');
+    const userRoleElement = document.getElementById('user-role');
     
-    const mockFiles = [
-        {
-            name: '示例文档.docx',
-            path: 'documents/示例文档.docx',
-            size: 1024000,
-            is_directory: false,
-            modified_time: new Date().toISOString()
-        },
-        {
-            name: '项目报告.pdf',
-            path: 'reports/项目报告.pdf',
-            size: 2048000,
-            is_directory: false,
-            modified_time: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-            name: '图片文件夹',
-            path: 'images',
-            size: 0,
-            is_directory: true,
-            modified_time: new Date(Date.now() - 172800000).toISOString()
-        },
-        {
-            name: '代码文件.js',
-            path: 'code/main.js',
-            size: 51200,
-            is_directory: false,
-            modified_time: new Date(Date.now() - 259200000).toISOString()
-        }
-    ];
+    if (userNameElement) {
+        userNameElement.textContent = username;
+    }
     
-    displayFiles(mockFiles);
-    updateFileStats(mockFiles);
-    showNotification('已加载模拟数据（API不可用）', 'info');
+    if (userRoleElement) {
+        userRoleElement.textContent = role;
+    }
 }
+
+
 
 // 初始化事件监听器
 function initializeEventListeners() {
@@ -647,9 +632,11 @@ function displaySharedFiles(result) {
         return;
     }
     
-    // 为共享文件添加所有者信息到文件名中
+    // 为共享文件添加所有者信息到文件名中，同时保留原始信息
     const enhancedSharedFiles = sharedFiles.map(file => ({
         ...file,
+        originalName: file.name,  // 保存原始文件名
+        originalOwner: file.owner,  // 保存原始所有者
         name: `${file.name} (由 ${file.owner} 共享)`
     }));
     
@@ -863,7 +850,7 @@ function showAPIDiagnostics() {
     Promise.all([
         fetch('/api/health').then(r => ({ endpoint: 'health', status: r.status, ok: r.ok })),
         fetch('/api/list?path=.').then(r => ({ endpoint: 'list', status: r.status, ok: r.ok })),
-        fetch('/api/search?q=test&path=.').then(r => ({ endpoint: 'search', status: r.status, ok: r.ok }))
+        fetch('/api/search?q=&path=.').then(r => ({ endpoint: 'search', status: r.status, ok: r.ok }))
     ]).then(results => {
         console.log('API诊断结果:', results);
         
@@ -970,6 +957,12 @@ function createFileRow(file, isRecentFiles = false, isFavorites = false, isShare
     const row = document.createElement('tr');
     row.className = `file-row ${file.is_directory ? 'folder' : 'file'}`;
     row.dataset.path = file.path;
+    
+    // 为共享文件保存原始信息
+    if (isSharedFile && file.originalName && file.originalOwner) {
+        row.dataset.originalName = file.originalName;
+        row.dataset.originalOwner = file.originalOwner;
+    }
     
     // 为文件夹添加点击事件类
     if (file.is_directory) {
@@ -1357,10 +1350,17 @@ function showFileMenu(path, event) {
     let originalFileName = fileName;
     let fileOwner = null;
     if (isSharedFile) {
-        const match = fileName.match(/^(.+?) \(由 (.+?) 共享\)$/);
-        if (match) {
-            originalFileName = match[1];
-            fileOwner = match[2];
+        // 优先从DOM数据属性获取原始信息
+        if (fileRow?.dataset.originalName && fileRow?.dataset.originalOwner) {
+            originalFileName = fileRow.dataset.originalName;
+            fileOwner = fileRow.dataset.originalOwner;
+        } else {
+            // 备用方案：从文件名解析
+            const match = fileName.match(/^(.+?) \(由 (.+?) 共享\)$/);
+            if (match) {
+                originalFileName = match[1];
+                fileOwner = match[2];
+            }
         }
     }
     
@@ -1378,18 +1378,7 @@ function showFileMenu(path, event) {
             action: () => editFile(path),
             show: !isDirectory && !isSharedFile  // 共享文件不允许编辑
         },
-        {
-            icon: 'fa-copy',
-            text: '复制',
-            action: () => copyFile(path, originalFileName),
-            show: true
-        },
-        {
-            icon: 'fa-cut',
-            text: '剪切',
-            action: () => cutFile(path, originalFileName),
-            show: true
-        },
+
         {
             icon: 'fa-share-alt',
             text: '分享到共享',
@@ -2767,7 +2756,7 @@ async function deleteSharedFile(filename, owner) {
         const response = await fetch(apiEndpoint, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: filename })
+            body: JSON.stringify({ filename: filename, owner: owner })
         });
         
         const result = await response.json();

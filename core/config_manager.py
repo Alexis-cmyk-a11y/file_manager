@@ -137,14 +137,14 @@ class ConfigManager:
             try:
                 with open(env_file, 'r', encoding='utf-8') as f:
                     env = f.read().strip()
-                    if env in ['development', 'production', 'testing']:
+                    if env in ['development', 'production']:
                         return env
             except Exception as e:
                 self.logger.warning(f"读取环境文件失败: {e}")
         
         # 从系统环境变量读取（仅作为备选）
         env = os.getenv('FLASK_ENV', 'development')
-        if env not in ['development', 'production', 'testing']:
+        if env not in ['development', 'production']:
             env = 'development'
         
         return env

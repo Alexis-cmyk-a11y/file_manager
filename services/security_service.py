@@ -1,6 +1,6 @@
 """
-安全服务模块
-提供文件系统操作的安全验证和防护
+安全服务
+提供文件系统安全检查和权限控制
 """
 
 import os
@@ -8,9 +8,10 @@ import re
 import mimetypes
 import hashlib
 from pathlib import Path, PurePath
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Optional
 from core.config import Config
 from utils.logger import get_logger
+from services.mysql_service import get_mysql_service
 
 logger = get_logger(__name__)
 
@@ -19,6 +20,7 @@ class SecurityService:
     
     def __init__(self):
         self.config = Config()
+        self.mysql_service = get_mysql_service()
         self._init_forbidden_patterns()
     
     def _init_forbidden_patterns(self):
@@ -407,3 +409,168 @@ class SecurityService:
             
         except Exception as e:
             logger.error(f"记录安全事件失败: {event_type}, 错误: {e}")
+
+    def check_user_directory_access(self, user_id: int, user_email: str, directory_path: str) -> bool:
+        """
+        检查用户是否有权限访问指定目录
+        
+        Args:
+            user_id: 用户ID
+            user_email: 用户邮箱
+            directory_path: 要访问的目录路径
+            
+        Returns:
+            bool: 是否有权限访问
+        """
+        try:
+            # 管理员可以访问所有目录
+            if user_email == 'admin@system.local':
+                return True
+            
+            # 获取用户信息
+            user_info = self.mysql_service.get_user_by_id(user_id)
+            if not user_info:
+                logger.warning(f"用户不存在: {user_id}")
+                return False
+            
+            # 检查用户角色
+            if user_info.get('role') == 'admin':
+                return True
+            
+            # 普通用户只能访问自己的目录
+            username = user_email.split('@')[0]  # 从邮箱提取用户名
+            user_directory = os.path.join('home', 'users', username)
+            
+            # 规范化路径
+            normalized_directory_path = os.path.normpath(directory_path)
+            normalized_user_directory = os.path.normpath(user_directory)
+            
+            # 检查路径是否在用户目录内
+            if normalized_directory_path == '.' or normalized_directory_path == '':
+                # 根目录访问，重定向到用户目录
+                return True
+            
+            # 检查是否在用户目录内
+            if normalized_directory_path.startswith(normalized_user_directory):
+                return True
+            
+            # 检查是否在共享目录内（用户可以访问共享目录）
+            shared_directory = os.path.join('home', 'shared')
+            normalized_shared_directory = os.path.normpath(shared_directory)
+            if normalized_directory_path.startswith(normalized_shared_directory):
+                return True
+            
+            logger.warning(f"用户 {user_email} 尝试访问未授权目录: {directory_path}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"检查用户目录权限失败: {e}")
+            return False
+    
+    def get_user_root_directory(self, user_id: int, user_email: str) -> str:
+        """
+        获取用户的根目录路径
+        
+        Args:
+            user_id: 用户ID
+            user_email: 用户邮箱
+            
+        Returns:
+            str: 用户的根目录路径
+        """
+        try:
+            # 管理员可以访问系统根目录
+            if user_email == 'admin@system.local':
+                return '.'
+            
+            # 获取用户信息
+            user_info = self.mysql_service.get_user_by_id(user_id)
+            if not user_info:
+                logger.warning(f"用户不存在: {user_id}")
+                return '.'
+            
+            # 检查用户角色
+            if user_info.get('role') == 'admin':
+                return '.'
+            
+            # 普通用户返回自己的目录
+            username = user_email.split('@')[0]  # 从邮箱提取用户名
+            user_directory = os.path.join('home', 'users', username)
+            
+            # 确保用户目录存在
+            if not os.path.exists(user_directory):
+                os.makedirs(user_directory, exist_ok=True)
+                logger.info(f"创建用户目录: {user_directory}")
+            
+            return user_directory
+            
+        except Exception as e:
+            logger.error(f"获取用户根目录失败: {e}")
+            return '.'
+    
+    def sanitize_path_for_user(self, user_id: int, user_email: str, directory_path: str) -> str:
+        """
+        为用户清理和验证路径
+        
+        Args:
+            user_id: 用户ID
+            user_email: 用户邮箱
+            directory_path: 原始路径
+            
+        Returns:
+            str: 清理后的安全路径
+        """
+        try:
+            # 管理员可以访问所有路径
+            if user_email == 'admin@system.local':
+                return directory_path
+            
+            # 获取用户信息
+            user_info = self.mysql_service.get_user_by_id(user_id)
+            if not user_info:
+                logger.warning(f"用户不存在: {user_id}")
+                return '.'
+            
+            # 检查用户角色
+            if user_info.get('role') == 'admin':
+                return directory_path
+            
+            # 普通用户路径处理
+            if directory_path == '.' or directory_path == '':
+                # 根目录访问，重定向到用户目录
+                return self.get_user_root_directory(user_id, user_email)
+            
+            # 规范化路径
+            normalized_path = os.path.normpath(directory_path)
+            
+            # 检查是否在用户目录内
+            username = user_email.split('@')[0]
+            user_directory = os.path.join('home', 'users', username)
+            normalized_user_directory = os.path.normpath(user_directory)
+            
+            if normalized_path.startswith(normalized_user_directory):
+                return normalized_path
+            
+            # 检查是否在共享目录内
+            shared_directory = os.path.join('home', 'shared')
+            normalized_shared_directory = os.path.normpath(shared_directory)
+            if normalized_path.startswith(normalized_shared_directory):
+                return normalized_path
+            
+            # 如果路径不在允许的范围内，重定向到用户目录
+            logger.warning(f"用户 {user_email} 访问未授权路径，重定向到用户目录: {directory_path}")
+            return self.get_user_root_directory(user_id, user_email)
+            
+        except Exception as e:
+            logger.error(f"清理用户路径失败: {e}")
+            return self.get_user_root_directory(user_id, user_email)
+
+# 全局安全服务实例
+_security_service = None
+
+def get_security_service() -> SecurityService:
+    """获取安全服务实例"""
+    global _security_service
+    if _security_service is None:
+        _security_service = SecurityService()
+    return _security_service

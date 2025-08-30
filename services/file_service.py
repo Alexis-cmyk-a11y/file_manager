@@ -105,7 +105,7 @@ class FileService:
             # 重新抛出异常以便调试
             raise
     
-    def list_directory(self, directory_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def list_directory(self, directory_path: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """列出目录内容"""
         start_time = time.time()
         
@@ -113,6 +113,18 @@ class FileService:
             # 安全检查
             if not FileUtils.is_safe_path(directory_path):
                 raise ValueError("不安全的路径")
+            
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                directory_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    directory_path
+                )
             
             # 处理空路径或"."，转换为当前工作目录
             if directory_path == "" or directory_path == ".":
@@ -181,7 +193,7 @@ class FileService:
             )
             raise
     
-    def get_file_info(self, file_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def get_file_info(self, file_path: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """获取文件信息"""
         start_time = time.time()
         
@@ -189,6 +201,20 @@ class FileService:
             # 安全检查
             if not FileUtils.is_safe_path(file_path):
                 raise ValueError("不安全的路径")
+            
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 检查用户是否有权限访问该文件
+                directory_path = os.path.dirname(file_path) if file_path != '.' else '.'
+                if not security_service.check_user_directory_access(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    directory_path
+                ):
+                    raise PermissionError("没有权限访问该文件")
             
             # 获取文件信息
             file_info = FileUtils.get_file_info(file_path)
@@ -226,7 +252,7 @@ class FileService:
             )
             raise
     
-    def create_directory(self, directory_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def create_directory(self, directory_path: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """创建目录"""
         start_time = time.time()
         
@@ -234,6 +260,20 @@ class FileService:
             # 安全检查
             if not FileUtils.is_safe_path(directory_path):
                 raise ValueError("不安全的路径")
+            
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 检查用户是否有权限在该目录创建文件夹
+                parent_directory = os.path.dirname(directory_path) if directory_path != '.' else '.'
+                if not security_service.check_user_directory_access(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    parent_directory
+                ):
+                    raise PermissionError("没有权限在该目录创建文件夹")
             
             # 检查目录是否已存在
             if os.path.exists(directory_path):
@@ -279,7 +319,7 @@ class FileService:
             )
             raise
     
-    def delete_file(self, file_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def delete_file(self, file_path: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """删除文件或目录"""
         start_time = time.time()
         
@@ -287,6 +327,20 @@ class FileService:
             # 安全检查
             if not FileUtils.is_safe_path(file_path):
                 raise ValueError("不安全的路径")
+            
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 检查用户是否有权限删除该文件
+                directory_path = os.path.dirname(file_path) if file_path != '.' else '.'
+                if not security_service.check_user_directory_access(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    directory_path
+                ):
+                    raise PermissionError("没有权限删除该文件")
             
             # 检查文件是否存在
             if not os.path.exists(file_path):

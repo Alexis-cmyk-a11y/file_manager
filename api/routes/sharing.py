@@ -91,24 +91,32 @@ def delete_shared_file():
     """删除共享文件"""
     try:
         data = request.get_json()
-        if not data or 'filename' not in data:
+        if not data or 'filename' not in data or 'owner' not in data:
             return jsonify({
                 'success': False,
                 'message': '缺少必要参数'
             }), 400
         
         filename = data['filename']
+        owner = data['owner']  # 文件所有者
         current_user = get_current_user()
-        username = current_user['email'].split('@')[0] if current_user and current_user.get('email') else None
+        current_username = current_user['email'].split('@')[0] if current_user and current_user.get('email') else None
         
-        if not username:
+        if not current_username:
             return jsonify({
                 'success': False,
                 'message': '无法获取用户信息'
             }), 400
         
+        # 权限检查：只有文件所有者和管理员可以删除
+        if current_username != owner and current_username != 'admin':
+            return jsonify({
+                'success': False,
+                'message': '权限不足，只有文件所有者和管理员可以删除共享文件'
+            }), 403
+        
         sharing_service = get_sharing_service()
-        success, message = sharing_service.delete_shared_file(username, filename)
+        success, message = sharing_service.delete_shared_file(owner, filename)
         
         return jsonify({
             'success': success,
@@ -130,13 +138,14 @@ def get_shared_files():
         current_user = get_current_user()
         username = request.args.get('username')  # 可选参数，获取特定用户的共享文件
         
-        # 如果没有指定用户名，使用当前用户
-        if not username:
-            username = current_user['email'].split('@')[0] if current_user and current_user.get('email') else None
-        
         # 获取共享文件列表
         sharing_service = get_sharing_service()
-        shared_files = sharing_service.get_shared_files(username)
+        if username:
+            # 如果指定了用户名，获取该用户的共享文件
+            shared_files = sharing_service.get_shared_files(username)
+        else:
+            # 如果没有指定用户名，获取所有共享文件
+            shared_files = sharing_service.get_shared_files()
         
         return jsonify({
             'success': True, 

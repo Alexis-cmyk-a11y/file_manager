@@ -183,15 +183,15 @@ class SharingService:
                             for filename in os.listdir(shared_dir):
                                 file_path = os.path.join(shared_dir, filename)
                                 if os.path.isfile(file_path):
-                                                                    all_shared_files.append({
-                                    'name': filename,
-                                    'path': f'{owner}_shared/{filename}',
-                                    'size': os.path.getsize(file_path),
-                                    'owner': owner,
-                                    'shared_path': file_path,
-                                    'is_directory': False,
-                                    'modified_time': os.path.getmtime(file_path)
-                                })
+                                    all_shared_files.append({
+                                        'name': filename,
+                                        'path': f'{owner}_shared/{filename}',
+                                        'size': os.path.getsize(file_path),
+                                        'owner': owner,
+                                        'shared_path': file_path,
+                                        'is_directory': False,
+                                        'modified_time': os.path.getmtime(file_path)
+                                    })
                 return all_shared_files
                 
         except Exception as e:

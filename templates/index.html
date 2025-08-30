@@ -346,7 +346,7 @@
                             </div>
                             <div class="user-details">
                                 <span class="user-name" id="user-name">{{ session.email if session.email else '用户' }}</span>
-                                <span class="user-role">管理员</span>
+                                <span class="user-role" id="user-role"></span>
                             </div>
                         </div>
                         
@@ -681,7 +681,7 @@
     <div class="overlay" id="overlay"></div>
 
     <!-- JavaScript文件 -->
-    <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='4.0') }}"></script>
+    <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='4.1') }}"></script>
     
     <!-- 页面初始化脚本 -->
     <script>

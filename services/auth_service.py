@@ -419,6 +419,27 @@ class AuthService:
         except Exception as e:
             logger.error(f"创建用户 {username} 个人空间失败: {e}")
             return False
+    
+    def get_user_info(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """获取用户信息"""
+        try:
+            user = self.mysql_service.get_user_by_id(user_id)
+            if not user:
+                return None
+            
+            # 返回用户信息（不包含敏感信息）
+            return {
+                'id': user['id'],
+                'email': user['email'],
+                'role': user.get('role', 'user'),
+                'status': user['status'],
+                'created_at': user['created_at'].isoformat() if user['created_at'] else None,
+                'last_login': user['last_login'].isoformat() if user['last_login'] else None
+            }
+            
+        except Exception as e:
+            logger.error(f"获取用户信息失败: {e}")
+            return None
 
 # 全局实例
 _auth_service = None

@@ -191,7 +191,7 @@ def validate_config_files(config_dir: Path) -> Tuple[bool, List[str]]:
             with open(env_file, 'r', encoding='utf-8') as f:
                 env = f.read().strip()
             
-            valid_envs = ['development', 'production', 'testing']
+            valid_envs = ['development', 'production']
             if env in valid_envs:
                 print(f"✅ 环境设置有效: {env}")
             else:
