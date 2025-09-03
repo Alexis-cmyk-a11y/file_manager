@@ -688,6 +688,16 @@ class MySQLService:
             logger.error(f"更新用户最后登录时间失败: {user_id}, 错误: {e}")
             return False
     
+    def update_user_password(self, user_id: int, password_hash: str) -> bool:
+        """更新用户密码"""
+        sql = "UPDATE users SET password_hash = %s WHERE id = %s"
+        try:
+            affected_rows = self.execute_update(sql, (password_hash, user_id))
+            return affected_rows > 0
+        except Exception as e:
+            logger.error(f"更新用户密码失败: {user_id}, 错误: {e}")
+            return False
+    
     def get_current_time(self):
         """获取当前数据库时间"""
         try:

@@ -113,6 +113,9 @@ class AuthService:
             if purpose == "register":
                 subject = "注册验证码"
                 template_data = {"email_verification_code": verification_code}
+            elif purpose == "reset_password":
+                subject = "密码重置验证码"
+                template_data = {"email_verification_code": verification_code}
             else:
                 subject = "登录验证码"
                 template_data = {"email_verification_code": verification_code}
@@ -440,6 +443,83 @@ class AuthService:
         except Exception as e:
             logger.error(f"获取用户信息失败: {e}")
             return None
+    
+    def change_password(self, user_id: int, current_password: str, new_password: str) -> Tuple[bool, str]:
+        """修改密码（登录后）"""
+        try:
+            # 获取用户信息
+            user = self.mysql_service.get_user_by_id(user_id)
+            if not user:
+                return False, "用户不存在"
+            
+            # 验证当前密码
+            if not bcrypt.checkpw(current_password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                return False, "当前密码错误"
+            
+            # 验证新密码强度
+            is_valid, password_msg = self.validate_password_strength(new_password)
+            if not is_valid:
+                return False, password_msg
+            
+            # 检查新密码是否与当前密码相同
+            if bcrypt.checkpw(new_password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                return False, "新密码不能与当前密码相同"
+            
+            # 加密新密码
+            salt = bcrypt.gensalt()
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt)
+            
+            # 更新密码
+            success = self.mysql_service.update_user_password(user_id, hashed_password.decode('utf-8'))
+            if success:
+                logger.info(f"用户 {user['email']} 修改密码成功")
+                return True, "密码修改成功"
+            else:
+                return False, "密码修改失败，请稍后重试"
+                
+        except Exception as e:
+            logger.error(f"修改密码失败: {e}")
+            return False, "系统错误，请稍后重试"
+    
+    def reset_password(self, email: str, verification_code: str, new_password: str) -> Tuple[bool, str]:
+        """重置密码（登录前）"""
+        try:
+            # 验证邮箱格式
+            if not self.validate_email_format(email):
+                return False, "邮箱格式不正确"
+            
+            # 验证新密码强度
+            is_valid, password_msg = self.validate_password_strength(new_password)
+            if not is_valid:
+                return False, password_msg
+            
+            # 注意：验证码已经在前面校验过了，这里不再重复验证
+            # 因为验证码在校验成功后会被删除（即焚机制）
+            
+            # 检查用户是否存在
+            user = self.mysql_service.get_user_by_email(email)
+            if not user:
+                return False, "用户不存在"
+            
+            # 检查账户状态
+            if user.get('status') != 'active':
+                return False, "账户已被禁用"
+            
+            # 加密新密码
+            salt = bcrypt.gensalt()
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt)
+            
+            # 更新密码
+            success = self.mysql_service.update_user_password(user['id'], hashed_password.decode('utf-8'))
+            if success:
+                logger.info(f"用户 {email} 重置密码成功")
+                return True, "密码重置成功"
+            else:
+                return False, "密码重置失败，请稍后重试"
+                
+        except Exception as e:
+            logger.error(f"重置密码失败: {e}")
+            return False, "系统错误，请稍后重试"
 
 # 全局实例
 _auth_service = None

@@ -320,3 +320,166 @@ def send_code():
             'success': False,
             'message': '系统错误，请稍后重试'
         }), 500
+
+@bp.route('/change-password', methods=['POST'])
+@require_auth_api
+def change_password():
+    """修改密码（登录后）"""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({
+                'success': False,
+                'message': '用户未登录'
+            }), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': '请求数据不能为空'
+            }), 400
+        
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        if not current_password or not new_password or not confirm_password:
+            return jsonify({
+                'success': False,
+                'message': '所有字段都必须填写'
+            }), 400
+        
+        if new_password != confirm_password:
+            return jsonify({
+                'success': False,
+                'message': '两次输入的新密码不一致'
+            }), 400
+        
+        # 调用认证服务
+        auth_service = get_auth_service()
+        success, message = auth_service.change_password(
+            current_user['user_id'], 
+            current_password, 
+            new_password
+        )
+        
+        if success:
+            logger.info(f"用户 {current_user['email']} 修改密码成功")
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            logger.warning(f"用户 {current_user['email']} 修改密码失败: {message}")
+            return jsonify({
+                'success': False,
+                'message': message
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"修改密码处理失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': '系统错误，请稍后重试'
+        }), 500
+
+@bp.route('/verify-code', methods=['POST'])
+def verify_code():
+    """验证码校验"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': '请求数据不能为空'
+            }), 400
+        
+        email = data.get('email')
+        verification_code = data.get('verification_code')
+        purpose = data.get('purpose', 'register')
+        
+        if not email or not verification_code:
+            return jsonify({
+                'success': False,
+                'message': '邮箱和验证码不能为空'
+            }), 400
+        
+        # 调用认证服务
+        auth_service = get_auth_service()
+        success, message = auth_service.verify_code(email, verification_code, purpose)
+        
+        if success:
+            logger.info(f"验证码校验成功: {email}, 用途: {purpose}")
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            logger.warning(f"验证码校验失败: {email}, 用途: {purpose}, 原因: {message}")
+            return jsonify({
+                'success': False,
+                'message': message
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"验证码校验处理失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': '系统错误，请稍后重试'
+        }), 500
+
+@bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """重置密码（登录前）"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': '请求数据不能为空'
+            }), 400
+        
+        email = data.get('email')
+        verification_code = data.get('verification_code')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        if not email or not verification_code or not new_password or not confirm_password:
+            return jsonify({
+                'success': False,
+                'message': '所有字段都必须填写'
+            }), 400
+        
+        if new_password != confirm_password:
+            return jsonify({
+                'success': False,
+                'message': '两次输入的新密码不一致'
+            }), 400
+        
+        # 获取用户IP
+        user_ip = request.remote_addr
+        
+        # 调用认证服务
+        auth_service = get_auth_service()
+        success, message = auth_service.reset_password(email, verification_code, new_password)
+        
+        if success:
+            logger.info(f"用户 {email} 重置密码成功, IP: {user_ip}")
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            logger.warning(f"用户 {email} 重置密码失败, IP: {user_ip}, 原因: {message}")
+            return jsonify({
+                'success': False,
+                'message': message
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"重置密码处理失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': '系统错误，请稍后重试'
+        }), 500

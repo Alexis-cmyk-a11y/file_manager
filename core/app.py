@@ -205,6 +205,11 @@ def register_page_routes(app):
         """登录页面"""
         return render_template('login.html')
     
+    @app.route('/reset-password')
+    def reset_password_page():
+        """重置密码页面"""
+        return render_template('reset_password.html')
+    
     @app.route('/register')
     def register_page():
         """注册页面"""
