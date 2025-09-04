@@ -147,7 +147,7 @@ def create_app(config_class=Config):
 
 def register_blueprints(app):
     """注册蓝图"""
-    from api.routes import file_ops, upload, download, system, editor, auth, sharing
+    from api.routes import file_ops, upload, download, system, editor, auth, sharing, chunked_upload
     
     app.register_blueprint(file_ops.bp)
     app.register_blueprint(upload.bp)
@@ -155,6 +155,7 @@ def register_blueprints(app):
     app.register_blueprint(system.bp)
     app.register_blueprint(editor.bp)
     app.register_blueprint(auth.bp)
+    app.register_blueprint(chunked_upload.bp)
 
     app.register_blueprint(sharing.sharing_bp, url_prefix='/api/sharing')
 
@@ -199,6 +200,12 @@ def register_page_routes(app):
     def shared_files_page():
         """共享文件页面（需要登录）"""
         return render_template('shared_files.html')
+    
+    @app.route('/upload-manager')
+    @require_auth
+    def upload_manager_page():
+        """上传管理页面（需要登录）"""
+        return render_template('upload_manager.html')
     
     @app.route('/login')
     def login_page():

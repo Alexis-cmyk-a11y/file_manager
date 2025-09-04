@@ -5,7 +5,7 @@ let currentUser = null;  // 当前用户信息
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("重构版文件管理系统初始化");
+    console.log("文件管理系统初始化");
     
     initializeEventListeners();
     initializeSidebar();
@@ -31,9 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBreadcrumb();
     });
     
-    setTimeout(() => {
-        showNotification('欢迎使用重构版文件管理系统！', 'success');
-    }, 1000);
 });
 
 
@@ -41,27 +38,27 @@ document.addEventListener('DOMContentLoaded', () => {
 // 获取当前用户信息并设置正确的初始路径
 async function getCurrentUserInfo() {
     try {
-        console.log('正在获取当前用户信息...');
+        // 获取当前用户信息
         
         // 尝试获取用户信息
                        const response = await fetch('/api/auth/user/info');
         if (response.ok) {
             const userData = await response.json();
             currentUser = userData;
-            console.log('当前用户信息:', currentUser);
+            // 用户信息获取成功
             
             // 如果不是管理员，设置初始路径为用户目录
             if (currentUser && currentUser.user && currentUser.user.email !== 'admin@system.local') {
                 // 从邮箱提取用户名
                 const username = currentUser.user.email.split('@')[0];
                 currentPath = `home/users/${username}`;
-                console.log('设置普通用户初始路径:', currentPath);
+                // 设置普通用户初始路径
                 
                 // 更新用户显示
                 updateUserDisplay(username, '用户');
             } else {
                 currentPath = '.';  // 管理员使用根目录
-                console.log('设置管理员初始路径:', currentPath);
+                // 设置管理员初始路径
                 
                 // 更新用户显示
                 updateUserDisplay('admin', '管理员');
@@ -140,7 +137,7 @@ function initializeSearch() {
 // 初始化视图控制
 function initializeViewControls() {
     // 视图控制和排序功能已移除
-    console.log('视图控制和排序功能已禁用');
+    // 视图控制和排序功能已禁用
 }
 
 // 切换侧边栏
@@ -152,7 +149,7 @@ function toggleSidebar() {
 // 切换视图模式
 function switchViewMode(view) {
     // 视图切换功能已移除
-    console.log('视图切换功能已禁用');
+    // 视图切换功能已禁用
 }
 
 // 处理搜索
@@ -169,10 +166,10 @@ function handleSearch(e) {
 async function searchFiles(query) {
     try {
         showLoading();
-        console.log('正在搜索文件，查询:', query, '路径:', currentPath);
+        // 正在搜索文件
         
         const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&path=${currentPath}`);
-        console.log('搜索API响应状态:', response.status, response.statusText);
+        // 搜索API响应
         
         if (response.status === 401) {
             showNotification('未登录或登录已过期，请先登录', 'warning');
@@ -185,22 +182,22 @@ async function searchFiles(query) {
         }
         
         const result = await response.json();
-        console.log('搜索API返回结果:', result);
+        // 搜索API返回结果
         
         // 检查API返回的数据结构
         if (result && result.results && Array.isArray(result.results)) {
             // 后端返回的是 results 数组（当前实现）
-            console.log('搜索成功，结果数量:', result.results.length);
+            // 搜索成功
             const normalizedItems = normalizeFileItems(result.results);
             displaySearchResults(normalizedItems, query);
         } else if (result && result.items && Array.isArray(result.items)) {
             // API返回的是 items 数组
-            console.log('搜索成功，结果数量:', result.items.length);
+            // 搜索成功
             const normalizedItems = normalizeFileItems(result.items);
             displaySearchResults(normalizedItems, query);
         } else if (result && result.files && Array.isArray(result.files)) {
             // 兼容旧的API格式
-            console.log('使用兼容格式，搜索结果数量:', result.files.length);
+            // 使用兼容格式
             displaySearchResults(result.files, query);
         } else if (result && result.success === false) {
             // API返回了明确的错误
@@ -260,7 +257,7 @@ function removeClearHistoryButton() {
 
 // 切换视图
 function switchView(view) {
-    console.log('切换到视图:', view);
+    // 切换到视图
     
     // 更新当前视图
     currentView = view;
@@ -329,7 +326,7 @@ function recordFileAccess(path, name) {
         // 保存到localStorage
         localStorage.setItem('recentFiles', JSON.stringify(recentFiles));
         
-        console.log('记录文件访问:', path, name);
+        // 记录文件访问
     } catch (error) {
         console.error('记录文件访问失败:', error);
     }

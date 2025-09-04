@@ -18,7 +18,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/local-fonts.css') }}">
     
     <!-- 预加载关键资源 -->
-    <link rel="preload" href="{{ url_for('static', filename='js/modern-script-complete.js') }}" as="script" crossorigin>
     <link rel="preload" href="{{ url_for('static', filename='css/modern-style.css') }}" as="style">
     
     <!-- 自定义样式 -->
@@ -681,6 +680,12 @@
                                 <span>共享文件</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="/upload-manager" class="nav-link" data-view="upload-manager">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>上传管理</span>
+                            </a>
+                        </li>
 
                     </ul>
                 </nav>
@@ -737,6 +742,10 @@
                                 <button id="upload-btn" class="action-btn primary" title="上传文件">
                                     <i class="fas fa-upload"></i>
                                     <span>上传文件</span>
+                                </button>
+                                <button id="chunked-upload-btn" class="action-btn primary" title="大文件上传">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>大文件上传</span>
                                 </button>
                                 <button id="new-folder-btn" class="action-btn secondary" title="新建文件夹">
                                     <i class="fas fa-folder-plus"></i>
@@ -932,7 +941,7 @@
                     <span class="progress-percentage" id="progress-percentage">0%</span>
                 </div>
                 <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
+                    <div class="progress-fill" id="download-progress-fill"></div>
                 </div>
                 <div class="progress-text" id="progress-text">准备下载...</div>
             </div>
@@ -940,6 +949,19 @@
         <div class="modal-actions">
             <button id="start-download-btn" class="btn-primary">开始下载</button>
             <button id="cancel-download-btn" class="btn-secondary">取消</button>
+        </div>
+    </div>
+
+    <!-- 分块上传模态框 -->
+    <div class="modal" id="chunked-upload-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-cloud-upload-alt"></i> 大文件上传</h3>
+            <button class="modal-close" onclick="hideChunkedUploadModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="chunked-upload-container"></div>
         </div>
     </div>
 
@@ -1009,12 +1031,14 @@
 
     <!-- JavaScript文件 -->
     <script src="{{ url_for('static', filename='js/modern-script-complete.js', v='4.1') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/ChunkedUploader.js', v='2.2') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/ChunkedUploadUI.js', v='2.0') }}"></script>
     
     <!-- 页面初始化脚本 -->
     <script>
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('文件管理系统重构版页面加载完成');
+            console.log('文件管理系统页面加载完成');
             
             // 初始化各个功能模块
             initializeSearch();
@@ -1024,19 +1048,10 @@
             
             // 显示欢迎消息
             setTimeout(() => {
-                showNotification('欢迎使用重构版文件管理系统！', 'success');
+                showNotification('欢迎使用文件管理系统！', 'success');
             }, 1000);
         });
 
-        // 页面加载完成后的初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('文件管理系统重构版页面加载完成');
-            
-            // 显示欢迎消息
-            setTimeout(() => {
-                showNotification('欢迎使用重构版文件管理系统！', 'success');
-            }, 1000);
-        });
 
         // 用户下拉菜单功能
         function toggleUserMenu() {
@@ -1156,6 +1171,37 @@
         document.getElementById('change-password-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 hideChangePasswordModal();
+            }
+        });
+
+        // 分块上传功能
+        let chunkedUploadUI = null;
+
+        function showChunkedUploadModal() {
+            const modal = document.getElementById('chunked-upload-modal');
+            modal.style.display = 'flex';
+            
+            // 初始化分块上传UI
+            if (!chunkedUploadUI) {
+                chunkedUploadUI = new ChunkedUploadUI('chunked-upload-container', {
+                    maxFileSize: 1024 * 1024 * 1024, // 1GB
+                    showProgress: true,
+                    showDetails: true,
+                    autoStart: true
+                });
+            }
+        }
+
+        function hideChunkedUploadModal() {
+            const modal = document.getElementById('chunked-upload-modal');
+            modal.style.display = 'none';
+        }
+
+        // 绑定分块上传按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const chunkedUploadBtn = document.getElementById('chunked-upload-btn');
+            if (chunkedUploadBtn) {
+                chunkedUploadBtn.addEventListener('click', showChunkedUploadModal);
             }
         });
     </script>

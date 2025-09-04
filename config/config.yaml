@@ -96,7 +96,7 @@ database:
 security:
   secret_key: null  # 自动生成
   session_timeout: 3600
-  rate_limit: "100 per minute"
+  rate_limit: "5000 per minute"  # 进一步增加速率限制，支持分块上传
   jwt_expiration: 86400  # 24小时
   password_policy:
     min_length: 8
@@ -299,6 +299,7 @@ filesystem:
       check_file_type: true
       check_file_size: true
       check_file_content: false
+  temp_dir: "temp"  # 临时文件目录
   download:
     enabled: true
     enable_resume: true
