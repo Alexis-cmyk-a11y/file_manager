@@ -605,3 +605,81 @@ def get_system_uptime():
         }
     except Exception as e:
         return {'error': str(e)}
+
+@bp.route('/cache/filesystem/clear', methods=['POST'])
+@require_auth_api
+@require_admin
+def clear_filesystem_cache():
+    """清除文件系统缓存 - 需要管理员权限"""
+    try:
+        from services.redis_service import get_redis_service
+        redis_service = get_redis_service()
+        
+        if not redis_service.is_connected():
+            return jsonify({'error': 'Redis服务未连接'}), 500
+        
+        cleared_count = 0
+        
+        # 清除目录列表缓存
+        dir_keys = redis_service.keys('dir_listing:*')
+        if dir_keys:
+            cleared_count += redis_service.delete(*dir_keys)
+        
+        # 清除文件信息缓存
+        file_keys = redis_service.keys('file_info:*')
+        if file_keys:
+            cleared_count += redis_service.delete(*file_keys)
+        
+        logger.info(f"管理员清除了文件系统缓存: {cleared_count} 个键")
+        return jsonify({
+            'success': True,
+            'message': f'文件系统缓存已清除，共清理 {cleared_count} 个缓存项',
+            'cleared_count': cleared_count,
+            'timestamp': datetime.now().isoformat()
+        })
+            
+    except Exception as e:
+        logger.error(f"清除文件系统缓存失败: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/cache/filesystem/stats', methods=['GET'])
+@require_auth_api
+@require_admin
+def get_filesystem_cache_stats():
+    """获取文件系统缓存统计 - 需要管理员权限"""
+    try:
+        from services.redis_service import get_redis_service
+        redis_service = get_redis_service()
+        
+        if not redis_service.is_connected():
+            return jsonify({'error': 'Redis服务未连接'}), 500
+        
+        # 统计各种缓存键的数量
+        dir_keys = redis_service.keys('dir_listing:*')
+        file_keys = redis_service.keys('file_info:*')
+        session_keys = redis_service.keys('user_session:*')
+        verification_keys = redis_service.keys('verification:*')
+        cooldown_keys = redis_service.keys('cooldown:*')
+        
+        stats = {
+            'filesystem_cache': {
+                'dir_listings': len(dir_keys),
+                'file_infos': len(file_keys)
+            },
+            'auth_cache': {
+                'sessions': len(session_keys),
+                'verifications': len(verification_keys),
+                'cooldowns': len(cooldown_keys)
+            },
+            'total_keys': len(dir_keys) + len(file_keys) + len(session_keys) + len(verification_keys) + len(cooldown_keys),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+            
+    except Exception as e:
+        logger.error(f"获取文件系统缓存统计失败: {e}")
+        return jsonify({'error': str(e)}), 500

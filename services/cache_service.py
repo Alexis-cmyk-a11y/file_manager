@@ -84,13 +84,8 @@ class CacheService:
                 try:
                     value = self.redis_service.get(key)
                     if value:
-                        # 解析JSON数据
-                        try:
-                            parsed_value = json.loads(value)
-                            logger.debug(f"从Redis缓存获取: {key}")
-                            return parsed_value
-                        except json.JSONDecodeError:
-                            return value
+                        logger.debug(f"从Redis缓存获取: {key}")
+                        return value
                 except Exception as e:
                     logger.warning(f"Redis获取缓存失败: {e}")
             
@@ -238,6 +233,10 @@ class CacheService:
         except Exception as e:
             logger.error(f"清理过期缓存失败: {e}")
             return 0
+    
+    def _get_redis_service(self):
+        """获取Redis服务实例"""
+        return self.redis_service
 
 # 全局缓存服务实例
 _cache_service = None

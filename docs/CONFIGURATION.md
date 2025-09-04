@@ -1,10 +1,10 @@
-# 配置文件系统文档
+# 配置文档
 
 ## 概述
 
 文件管理系统使用基于YAML的配置文件系统，支持多环境配置管理。
 
-## 配置目录结构
+## 配置结构
 
 ```
 config/
@@ -24,44 +24,29 @@ config/
 development  # 或 production
 ```
 
-### 2. 基本配置
+### 2. 数据库配置
 
 **config.yaml** - 主配置文件：
 ```yaml
-app:
-  name: "文件管理系统"
-  version: "2.0.0"
-
-environments:
-  development:
-    debug: true
-    server:
-      host: "127.0.0.1"
-      port: 8888
-  production:
-    debug: false
-    server:
-      host: "0.0.0.0"
-      port: 8888
-
 database:
   mysql:
     host: "localhost"
     port: 3306
     database: "file_manager"
     username: "root"
-    password: "password"
+    password: "your_password"
   redis:
     host: "localhost"
     port: 6379
+    db: 0
 ```
 
-### 3. 环境特定配置
+### 3. 服务器配置
 
 **development.yaml:**
 ```yaml
 debug: true
-log_level: DEBUG
+log_level: INFO
 server:
   host: "127.0.0.1"
   port: 8888

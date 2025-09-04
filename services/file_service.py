@@ -6,6 +6,7 @@
 import os
 import shutil
 import time
+import hashlib
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
@@ -133,6 +134,20 @@ class FileService:
             else:
                 actual_path = directory_path
             
+            # 生成缓存键
+            cache_key = f"dir_listing:{hashlib.md5(directory_path.encode()).hexdigest()[:16]}"
+            
+            # 尝试从缓存获取
+            cached_result = self.cache_service.get(cache_key)
+            if cached_result:
+                logger.info(f"✅ 缓存命中 - 目录列表: {directory_path}")
+                # 更新最后访问时间
+                cached_result['cached_at'] = time.time()
+                return cached_result
+            
+            # 缓存未命中，从文件系统获取
+            logger.info(f"❌ 缓存未命中 - 目录列表: {directory_path}")
+            
             # 获取目录内容
             items = []
             total_size = 0
@@ -157,15 +172,38 @@ class FileService:
             # 按类型和名称排序
             items.sort(key=lambda x: (not x['is_directory'], x['name'].lower()))
             
+            # 处理items中的datetime对象，转换为字符串
+            processed_items = []
+            for item in items:
+                processed_item = item.copy()
+                if 'created_time' in processed_item and hasattr(processed_item['created_time'], 'isoformat'):
+                    processed_item['created_time'] = processed_item['created_time'].isoformat()
+                if 'modified_time' in processed_item and hasattr(processed_item['modified_time'], 'isoformat'):
+                    processed_item['modified_time'] = processed_item['modified_time'].isoformat()
+                processed_items.append(processed_item)
+            
             result = {
                 'path': directory_path,
-                'items': items,
+                'items': processed_items,
                 'total_items': len(items),
                 'file_count': file_count,
                 'dir_count': dir_count,
                 'total_size': total_size,
-                'formatted_size': FileUtils.format_file_size(total_size)
+                'formatted_size': FileUtils.format_file_size(total_size),
+                'cached_at': time.time()
             }
+            
+            # 缓存结果
+            cache_success = self.cache_service.set(
+                cache_key, 
+                result, 
+                data_type='dir_listing',
+                data_size=len(items)
+            )
+            if cache_success:
+                logger.info(f"💾 目录列表已缓存: {directory_path} (键: {cache_key})")
+            else:
+                logger.warning(f"⚠️ 目录列表缓存失败: {directory_path}")
             
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)
@@ -216,10 +254,35 @@ class FileService:
                 ):
                     raise PermissionError("没有权限访问该文件")
             
+            # 生成缓存键
+            cache_key = f"file_info:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
+            
+            # 尝试从缓存获取
+            cached_file_info = self.cache_service.get(cache_key)
+            if cached_file_info:
+                logger.debug(f"从缓存获取文件信息: {file_path}")
+                # 更新最后访问时间
+                cached_file_info['cached_at'] = time.time()
+                return cached_file_info
+            
+            # 缓存未命中，从文件系统获取
+            logger.debug(f"缓存未命中，从文件系统获取文件信息: {file_path}")
+            
             # 获取文件信息
             file_info = FileUtils.get_file_info(file_path)
             if not file_info:
                 raise FileNotFoundError("文件不存在")
+            
+            # 添加缓存时间戳
+            file_info['cached_at'] = time.time()
+            
+            # 缓存文件信息
+            self.cache_service.set(
+                cache_key, 
+                file_info, 
+                data_type='file_info'
+            )
+            logger.debug(f"文件信息已缓存: {file_path}")
             
             # 保存文件信息到数据库
             self._save_file_info_to_db(file_path, file_info)
@@ -288,6 +351,10 @@ class FileService:
             # 保存目录信息到数据库
             self._save_file_info_to_db(directory_path, dir_info)
             
+            # 清理父目录缓存
+            parent_dir = os.path.dirname(directory_path) if directory_path != '.' else '.'
+            self._invalidate_cache(parent_dir)
+            
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)
             self._log_operation(
@@ -351,6 +418,9 @@ class FileService:
             
             # 在删除源文件之前，检查并清理相关的共享文件
             self._cleanup_related_shares(file_path)
+            
+            # 清理相关缓存
+            self._invalidate_cache(file_path)
             
             # 删除文件或目录
             if os.path.isdir(file_path):
@@ -428,6 +498,10 @@ class FileService:
             # 获取新文件信息
             new_file_info = FileUtils.get_file_info(new_path)
             
+            # 清理相关缓存
+            self._invalidate_cache(old_path)
+            self._invalidate_cache(new_path)
+            
             # 更新数据库中的文件信息
             if self.mysql_service and self.mysql_service.is_connected():
                 try:
@@ -500,6 +574,10 @@ class FileService:
             
             # 获取移动后的文件信息
             target_file_info = FileUtils.get_file_info(target_path)
+            
+            # 清理相关缓存
+            self._invalidate_cache(source_path)
+            self._invalidate_cache(target_path)
             
             # 更新数据库中的文件信息
             if self.mysql_service and self.mysql_service.is_connected():
@@ -576,6 +654,9 @@ class FileService:
             
             # 获取复制后的文件信息
             target_file_info = FileUtils.get_file_info(target_path)
+            
+            # 清理目标目录缓存
+            self._invalidate_cache(target_path)
             
             # 保存新文件信息到数据库
             self._save_file_info_to_db(target_path, target_file_info)
@@ -680,6 +761,26 @@ class FileService:
                 duration_ms=duration_ms
             )
             raise
+    
+    def _invalidate_cache(self, file_path: str) -> None:
+        """
+        使相关缓存失效
+        :param file_path: 文件路径
+        """
+        try:
+            # 清理文件信息缓存
+            file_cache_key = f"file_info:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
+            self.cache_service.delete(file_cache_key)
+            logger.debug(f"清理文件信息缓存: {file_path}")
+            
+            # 清理父目录的目录列表缓存
+            parent_dir = os.path.dirname(file_path) if file_path != '.' else '.'
+            dir_cache_key = f"dir_listing:{hashlib.md5(parent_dir.encode()).hexdigest()[:16]}"
+            self.cache_service.delete(dir_cache_key)
+            logger.debug(f"清理父目录缓存: {parent_dir}")
+            
+        except Exception as e:
+            logger.error(f"清理缓存失败: {file_path}, 错误: {e}")
     
     def _cleanup_related_shares(self, file_path: str) -> None:
         """
