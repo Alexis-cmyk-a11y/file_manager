@@ -55,7 +55,7 @@ def upload_file():
             }), 400
         
         # 上传文件
-        result = upload_service.upload_file(file, target_directory, user_ip, user_agent)
+        result = upload_service.upload_file(file, target_directory, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
@@ -113,7 +113,7 @@ def upload_multiple_files():
         results = []
         for file in valid_files:
             try:
-                result = upload_service.upload_file(file, target_directory, user_ip, user_agent)
+                result = upload_service.upload_file(file, target_directory, user_ip, user_agent, current_user)
                 results.append(result)
             except Exception as e:
                 logger.error(f"上传文件 {file.filename} 失败: {str(e)}")
@@ -137,6 +137,7 @@ def upload_multiple_files():
         }), 500
 
 @bp.route('/stats', methods=['GET'])
+@require_auth_api
 def get_upload_stats():
     """获取上传统计信息"""
     try:

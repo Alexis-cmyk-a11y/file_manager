@@ -497,8 +497,14 @@ class ChunkedUploadUI {
         showNotification('文件上传完成！', 'success');
         
         // 刷新文件列表
-        if (typeof refreshFileList === 'function') {
-            refreshFileList();
+        if (typeof loadFileList === 'function') {
+            console.log('分块上传完成，准备刷新文件列表，当前路径:', typeof currentPath !== 'undefined' ? currentPath : '未定义');
+            
+            // 延迟一点时间确保服务器端文件已写入
+            setTimeout(() => {
+                console.log('延迟刷新文件列表，当前路径:', typeof currentPath !== 'undefined' ? currentPath : '未定义');
+                loadFileList();
+            }, 500);
         }
         
         // 延迟3秒后自动关闭模态框并刷新页面
@@ -593,6 +599,29 @@ class ChunkedUploadUI {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             return hours + '小时' + minutes + '分';
+        }
+    }
+    
+    // 设置文件到上传器
+    setFiles(files) {
+        if (!files || files.length === 0) {
+            console.warn('没有文件需要上传');
+            return;
+        }
+        
+        console.log('设置文件到分块上传器:', files.map(f => ({ name: f.name, size: f.size })));
+        
+        // 模拟文件选择事件
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) {
+            // 创建DataTransfer对象来设置文件
+            const dataTransfer = new DataTransfer();
+            files.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+            
+            // 触发change事件
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
         }
     }
 }

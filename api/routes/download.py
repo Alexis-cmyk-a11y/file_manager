@@ -3,10 +3,12 @@
 处理文件下载相关的请求
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 from services.download_service import DownloadService
 from utils.logger import get_logger
 from utils.auth_middleware import require_auth_api, get_current_user
+from utils.file_utils import FileUtils
+import os
 
 
 logger = get_logger(__name__)
@@ -192,6 +194,63 @@ def delete_downloaded_file():
         
     except Exception as e:
         logger.error(f"删除下载文件失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/download/shared/<owner>/<path:filename>', methods=['GET'])
+@require_auth_api
+def download_shared_file(owner, filename):
+    """下载共享文件"""
+    try:
+        # 获取当前用户信息
+        current_user = get_current_user()
+        user_ip, user_agent = get_user_info()
+        
+        logger.info(f"用户 {current_user['email']} 下载共享文件: {owner}/{filename}")
+        
+        # 构建共享文件路径
+        shared_file_path = os.path.join('home', 'shared', f'{owner}_shared', filename)
+        
+        # 检查文件是否存在
+        if not os.path.exists(shared_file_path):
+            return jsonify({
+                'success': False,
+                'message': '文件不存在'
+            }), 404
+        
+        # 检查是否为文件
+        if not os.path.isfile(shared_file_path):
+            return jsonify({
+                'success': False,
+                'message': '路径不是文件'
+            }), 400
+        
+        # 获取文件信息
+        file_info = FileUtils.get_file_info(shared_file_path)
+        
+        # 记录操作日志
+        download_service = DownloadService()
+        download_service._log_operation(
+            operation_type='download_shared',
+            file_path=shared_file_path,
+            file_name=filename,
+            file_size=file_info['size'],
+            user_ip=user_ip,
+            user_agent=user_agent,
+            status='success'
+        )
+        
+        # 发送文件
+        return send_file(
+            os.path.abspath(shared_file_path),
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"共享文件下载失败: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)

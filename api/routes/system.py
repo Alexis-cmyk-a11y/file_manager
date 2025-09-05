@@ -304,6 +304,7 @@ def get_log_stats():
         }), 500
 
 @bp.route('/logs/retention', methods=['GET'])
+@require_auth_api
 def get_log_retention_info():
     """获取日志保留信息"""
     try:
@@ -325,6 +326,7 @@ def get_log_retention_info():
         }), 500
 
 @bp.route('/logs/cleanup', methods=['POST'])
+@require_auth_api
 def cleanup_old_logs():
     """清理过期日志"""
     try:
@@ -355,6 +357,7 @@ def cleanup_old_logs():
         }), 500
 
 @bp.route('/logs/optimize', methods=['POST'])
+@require_auth_api
 def optimize_log_table():
     """优化日志表性能"""
     try:
@@ -376,6 +379,7 @@ def optimize_log_table():
         }), 500
 
 @bp.route('/status', methods=['GET'])
+@require_auth_api
 def system_status():
     """获取系统状态信息"""
     try:
@@ -395,6 +399,7 @@ def system_status():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/performance', methods=['GET'])
+@require_auth_api
 def performance_status():
     """获取性能监控状态"""
     try:
@@ -417,6 +422,7 @@ def performance_status():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/performance/reset', methods=['POST'])
+@require_auth_api
 def reset_performance_stats():
     """重置性能统计"""
     try:
@@ -435,6 +441,7 @@ def reset_performance_stats():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/cache/status', methods=['GET'])
+@require_auth_api
 def cache_status():
     """获取缓存状态"""
     try:
@@ -452,6 +459,7 @@ def cache_status():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/cache/clear', methods=['POST'])
+@require_auth_api
 def clear_cache():
     """清理缓存"""
     try:

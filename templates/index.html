@@ -136,6 +136,35 @@
             box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
         }
         
+        /* 智能上传按钮特殊样式 */
+        #smart-upload-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #smart-upload-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        #smart-upload-btn:hover::before {
+            left: 100%;
+        }
+        
+        #smart-upload-btn .fas {
+            transition: transform 0.3s ease;
+        }
+        
+        #smart-upload-btn:hover .fas {
+            transform: scale(1.1);
+        }
+        
         .action-btn.secondary {
             background: #ffffff;
             color: #475569;
@@ -210,14 +239,33 @@
         /* 文件上下文菜单样式 */
         .file-context-menu {
             animation: fadeInUp 0.2s ease-out;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+        
+        .file-context-menu .menu-item {
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            margin: 2px 8px;
         }
         
         .file-context-menu .menu-item:hover {
             background-color: #f8f9fa;
+            transform: translateX(2px);
         }
         
         .file-context-menu .menu-item.danger:hover {
             background-color: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .file-context-menu .menu-item i {
+            transition: transform 0.2s ease;
+        }
+        
+        .file-context-menu .menu-item:hover i {
+            transform: scale(1.1);
         }
         
         /* 文件树选择器样式 */
@@ -739,13 +787,9 @@
                         
                         <div class="toolbar-right">
                             <div class="action-buttons">
-                                <button id="upload-btn" class="action-btn primary" title="上传文件">
+                                <button id="smart-upload-btn" class="action-btn primary" title="智能上传文件 - 小文件快速上传，大文件分块上传">
                                     <i class="fas fa-upload"></i>
                                     <span>上传文件</span>
-                                </button>
-                                <button id="chunked-upload-btn" class="action-btn primary" title="大文件上传">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <span>大文件上传</span>
                                 </button>
                                 <button id="new-folder-btn" class="action-btn secondary" title="新建文件夹">
                                     <i class="fas fa-folder-plus"></i>
@@ -825,7 +869,7 @@
                             <h3>当前目录为空</h3>
                             <p>您可以上传文件或创建新文件夹来开始使用</p>
                             <div class="empty-actions">
-                                <button class="action-btn primary" onclick="document.getElementById('upload-btn').click()">
+                                <button class="action-btn primary" onclick="document.getElementById('smart-upload-btn').click()">
                                     <i class="fas fa-upload"></i>
                                     <span>上传文件</span>
                                 </button>
@@ -1197,13 +1241,7 @@
             modal.style.display = 'none';
         }
 
-        // 绑定分块上传按钮事件
-        document.addEventListener('DOMContentLoaded', function() {
-            const chunkedUploadBtn = document.getElementById('chunked-upload-btn');
-            if (chunkedUploadBtn) {
-                chunkedUploadBtn.addEventListener('click', showChunkedUploadModal);
-            }
-        });
+        // 分块上传按钮事件已合并到智能上传中
     </script>
 </body>
 </html>

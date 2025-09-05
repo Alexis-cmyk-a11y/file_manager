@@ -169,7 +169,7 @@ def rename_file():
         logger.info(f"用户 {current_user['email']} 重命名文件/目录: {old_path} -> {new_name}")
         
         file_service = FileService()
-        result = file_service.rename_file(old_path, new_name, user_ip, user_agent)
+        result = file_service.rename_file(old_path, new_name, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
@@ -201,7 +201,7 @@ def move_file():
         logger.info(f"用户 {current_user['email']} 移动文件/目录: {source_path} -> {target_path}")
         
         file_service = FileService()
-        result = file_service.move_file(source_path, target_path, user_ip, user_agent)
+        result = file_service.move_file(source_path, target_path, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
@@ -233,7 +233,7 @@ def copy_file():
         logger.info(f"用户 {current_user['email']} 复制文件/目录: {source_path} -> {target_path}")
         
         file_service = FileService()
-        result = file_service.copy_file(source_path, target_path, user_ip, user_agent)
+        result = file_service.copy_file(source_path, target_path, user_ip, user_agent, current_user)
         
         return jsonify(result)
         

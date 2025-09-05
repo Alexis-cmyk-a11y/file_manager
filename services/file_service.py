@@ -134,19 +134,21 @@ class FileService:
             else:
                 actual_path = directory_path
             
-            # 生成缓存键
-            cache_key = f"dir_listing:{hashlib.md5(directory_path.encode()).hexdigest()[:16]}"
+            # 生成包含用户信息的缓存键
+            user_id = current_user['user_id'] if current_user else 'anonymous'
+            cache_key = f"dir_listing:{user_id}:{hashlib.md5(directory_path.encode()).hexdigest()[:16]}"
             
             # 尝试从缓存获取
             cached_result = self.cache_service.get(cache_key)
             if cached_result:
-                logger.info(f"✅ 缓存命中 - 目录列表: {directory_path}")
+                logger.info(f"✅ 缓存命中 - 目录列表: {directory_path}, 缓存键: {cache_key}")
+                logger.info(f"缓存数据项目数量: {len(cached_result.get('items', []))}")
                 # 更新最后访问时间
                 cached_result['cached_at'] = time.time()
                 return cached_result
             
             # 缓存未命中，从文件系统获取
-            logger.info(f"❌ 缓存未命中 - 目录列表: {directory_path}")
+            logger.info(f"❌ 缓存未命中 - 目录列表: {directory_path}, 缓存键: {cache_key}")
             
             # 获取目录内容
             items = []
@@ -254,8 +256,9 @@ class FileService:
                 ):
                     raise PermissionError("没有权限访问该文件")
             
-            # 生成缓存键
-            cache_key = f"file_info:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
+            # 生成包含用户信息的缓存键
+            user_id = current_user['user_id'] if current_user else 'anonymous'
+            cache_key = f"file_info:{user_id}:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
             
             # 尝试从缓存获取
             cached_file_info = self.cache_service.get(cache_key)
@@ -353,7 +356,7 @@ class FileService:
             
             # 清理父目录缓存
             parent_dir = os.path.dirname(directory_path) if directory_path != '.' else '.'
-            self._invalidate_cache(parent_dir)
+            self._invalidate_cache(parent_dir, current_user)
             
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)
@@ -411,27 +414,40 @@ class FileService:
             
             # 检查文件是否存在
             if not os.path.exists(file_path):
+                logger.warning(f"文件不存在，无法删除: {file_path}")
                 raise FileNotFoundError("文件不存在")
+            
+            logger.info(f"文件存在，准备删除: {file_path}")
             
             # 获取文件信息（用于日志记录）
             file_info = FileUtils.get_file_info(file_path)
+            logger.info(f"文件信息: {file_info}")
             
             # 在删除源文件之前，检查并清理相关的共享文件
             self._cleanup_related_shares(file_path)
             
-            # 清理相关缓存
-            self._invalidate_cache(file_path)
-            
             # 删除文件或目录
             if os.path.isdir(file_path):
+                logger.info(f"删除目录: {file_path}")
                 shutil.rmtree(file_path)
                 operation_type = 'delete_folder'
             else:
+                logger.info(f"删除文件: {file_path}")
                 os.remove(file_path)
                 operation_type = 'delete'
             
+            # 验证文件是否真的被删除
+            if os.path.exists(file_path):
+                logger.error(f"文件删除失败，文件仍然存在: {file_path}")
+                raise Exception("文件删除失败")
+            else:
+                logger.info(f"文件删除成功，文件已不存在: {file_path}")
+            
             # 从数据库删除文件信息
             self._delete_file_info_from_db(file_path)
+            
+            # 清理相关缓存（在文件删除后）
+            self._invalidate_cache(file_path, current_user)
             
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)
@@ -465,7 +481,7 @@ class FileService:
             )
             raise
     
-    def rename_file(self, old_path: str, new_name: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def rename_file(self, old_path: str, new_name: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """重命名文件或目录"""
         start_time = time.time()
         
@@ -499,8 +515,8 @@ class FileService:
             new_file_info = FileUtils.get_file_info(new_path)
             
             # 清理相关缓存
-            self._invalidate_cache(old_path)
-            self._invalidate_cache(new_path)
+            self._invalidate_cache(old_path, current_user)
+            self._invalidate_cache(new_path, current_user)
             
             # 更新数据库中的文件信息
             if self.mysql_service and self.mysql_service.is_connected():
@@ -546,7 +562,7 @@ class FileService:
             )
             raise
     
-    def move_file(self, source_path: str, target_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def move_file(self, source_path: str, target_path: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """移动文件或目录"""
         start_time = time.time()
         
@@ -576,8 +592,8 @@ class FileService:
             target_file_info = FileUtils.get_file_info(target_path)
             
             # 清理相关缓存
-            self._invalidate_cache(source_path)
-            self._invalidate_cache(target_path)
+            self._invalidate_cache(source_path, current_user)
+            self._invalidate_cache(target_path, current_user)
             
             # 更新数据库中的文件信息
             if self.mysql_service and self.mysql_service.is_connected():
@@ -623,7 +639,7 @@ class FileService:
             )
             raise
     
-    def copy_file(self, source_path: str, target_path: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def copy_file(self, source_path: str, target_path: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """复制文件或目录"""
         start_time = time.time()
         
@@ -656,7 +672,7 @@ class FileService:
             target_file_info = FileUtils.get_file_info(target_path)
             
             # 清理目标目录缓存
-            self._invalidate_cache(target_path)
+            self._invalidate_cache(target_path, current_user)
             
             # 保存新文件信息到数据库
             self._save_file_info_to_db(target_path, target_file_info)
@@ -762,22 +778,44 @@ class FileService:
             )
             raise
     
-    def _invalidate_cache(self, file_path: str) -> None:
+    def _invalidate_cache(self, file_path: str, current_user: Dict[str, Any] = None) -> None:
         """
         使相关缓存失效
         :param file_path: 文件路径
+        :param current_user: 当前用户信息
         """
         try:
+            # 获取用户ID
+            user_id = current_user['user_id'] if current_user else 'anonymous'
+            logger.info(f"开始清理缓存，文件路径: {file_path}, 用户ID: {user_id}")
+            
             # 清理文件信息缓存
-            file_cache_key = f"file_info:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
+            file_cache_key = f"file_info:{user_id}:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
             self.cache_service.delete(file_cache_key)
-            logger.debug(f"清理文件信息缓存: {file_path}")
+            logger.info(f"清理文件信息缓存: {file_path} -> {file_cache_key}")
             
             # 清理父目录的目录列表缓存
             parent_dir = os.path.dirname(file_path) if file_path != '.' else '.'
-            dir_cache_key = f"dir_listing:{hashlib.md5(parent_dir.encode()).hexdigest()[:16]}"
+            # 确保父目录路径格式与list_directory中的处理一致
+            if parent_dir == "" or parent_dir == ".":
+                parent_dir = "."
+            
+            dir_cache_key = f"dir_listing:{user_id}:{hashlib.md5(parent_dir.encode()).hexdigest()[:16]}"
             self.cache_service.delete(dir_cache_key)
-            logger.debug(f"清理父目录缓存: {parent_dir}")
+            logger.info(f"清理父目录缓存: {parent_dir} -> {dir_cache_key}")
+            
+            # 清理所有相关的目录列表缓存（使用模式匹配）
+            # 这确保清理所有可能的缓存变体
+            pattern = "dir_listing:*"
+            cleared_count = self.cache_service.clear_pattern(pattern)
+            logger.info(f"清理目录列表缓存模式: {pattern}, 清理了 {cleared_count} 个键")
+            
+            # 清理所有文件信息缓存
+            file_pattern = "file_info:*"
+            cleared_file_count = self.cache_service.clear_pattern(file_pattern)
+            logger.info(f"清理文件信息缓存模式: {file_pattern}, 清理了 {cleared_file_count} 个键")
+            
+            logger.info(f"缓存清理完成，文件路径: {file_path}")
             
         except Exception as e:
             logger.error(f"清理缓存失败: {file_path}, 错误: {e}")

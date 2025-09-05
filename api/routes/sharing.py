@@ -16,12 +16,10 @@ logger = get_logger(__name__)
 sharing_bp = Blueprint('sharing', __name__)
 
 @sharing_bp.route('/share', methods=['POST'])
+@require_auth_api
 def share_file():
     """共享文件"""
     try:
-        # 检查用户登录状态
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': '请先登录'}), 401
         
         # 获取请求参数
         data = request.get_json()
@@ -30,7 +28,10 @@ def share_file():
         
         source_path = data['source_path']
         target_name = data.get('target_name', os.path.basename(source_path))
-        username = session.get('username', session.get('email', '').split('@')[0])
+        
+        # 获取当前用户信息
+        current_user = get_current_user()
+        username = current_user.get('username', current_user.get('email', '').split('@')[0])
         
         if not username:
             return jsonify({'success': False, 'message': '无法获取用户信息'}), 400

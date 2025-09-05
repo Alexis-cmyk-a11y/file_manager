@@ -99,7 +99,12 @@ class EditorService:
     def read_file_content(self, file_path: str) -> Dict[str, any]:
         """读取文件内容"""
         try:
-            abs_path = os.path.join(self.root_dir, file_path)
+            # 处理共享文件路径
+            if '_shared/' in file_path:
+                # 共享文件路径格式：owner_shared/filename
+                abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+            else:
+                abs_path = os.path.join(self.root_dir, file_path)
             
             # 安全检查：确保文件路径在根目录内
             if not os.path.abspath(abs_path).startswith(os.path.abspath(self.root_dir)):
@@ -163,6 +168,13 @@ class EditorService:
     def save_file_content(self, file_path: str, content: str) -> Dict[str, any]:
         """保存文件内容"""
         try:
+            # 检查是否为共享文件（共享文件不允许编辑）
+            if '_shared/' in file_path:
+                return {
+                    'success': False,
+                    'message': '共享文件不允许编辑'
+                }
+            
             abs_path = os.path.join(self.root_dir, file_path)
             
             # 安全检查：确保文件路径在根目录内
@@ -209,7 +221,12 @@ class EditorService:
     def get_file_preview(self, file_path: str, max_lines: int = 100) -> Dict[str, any]:
         """获取文件预览（前几行）"""
         try:
-            abs_path = os.path.join(self.root_dir, file_path)
+            # 处理共享文件路径
+            if '_shared/' in file_path:
+                # 共享文件路径格式：owner_shared/filename
+                abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+            else:
+                abs_path = os.path.join(self.root_dir, file_path)
             
             if not os.path.exists(abs_path):
                 raise FileNotFoundError("文件不存在")
@@ -247,7 +264,12 @@ class EditorService:
     def search_in_file(self, file_path: str, search_term: str, case_sensitive: bool = False) -> Dict[str, any]:
         """在文件中搜索文本"""
         try:
-            abs_path = os.path.join(self.root_dir, file_path)
+            # 处理共享文件路径
+            if '_shared/' in file_path:
+                # 共享文件路径格式：owner_shared/filename
+                abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+            else:
+                abs_path = os.path.join(self.root_dir, file_path)
             
             if not os.path.exists(abs_path):
                 raise FileNotFoundError("文件不存在")

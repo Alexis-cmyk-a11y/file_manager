@@ -196,7 +196,7 @@ def register_page_routes(app):
         return render_template('editor.html')
     
     @app.route('/shared')
-    # @require_auth  # 临时注释掉身份验证
+    @require_auth
     def shared_files_page():
         """共享文件页面（需要登录）"""
         return render_template('shared_files.html')

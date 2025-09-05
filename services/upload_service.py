@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 
 from core.config import Config
 from services.mysql_service import get_mysql_service
+from services.cache_service import get_cache_service
 from utils.logger import get_logger
 from utils.file_utils import FileUtils
 
@@ -22,6 +23,7 @@ class UploadService:
     def __init__(self):
         self.config = Config()
         self.mysql_service = None
+        self.cache_service = get_cache_service()
         
         # 尝试初始化MySQL服务
         try:
@@ -67,7 +69,37 @@ class UploadService:
         except Exception as e:
             logger.error(f"保存文件信息到数据库失败: {e}")
     
-    def upload_file(self, file, target_directory: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def _invalidate_cache(self, file_path: str, current_user: Dict[str, Any] = None) -> None:
+        """清理相关缓存"""
+        try:
+            import hashlib
+            
+            # 获取用户ID
+            user_id = current_user['user_id'] if current_user else 'anonymous'
+            logger.info(f"开始清理上传缓存，文件路径: {file_path}, 用户ID: {user_id}")
+            
+            # 清理文件信息缓存
+            file_cache_key = f"file_info:{user_id}:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
+            self.cache_service.delete(file_cache_key)
+            logger.info(f"清理文件信息缓存: {file_path} -> {file_cache_key}")
+            
+            # 清理父目录的目录列表缓存
+            parent_dir = os.path.dirname(file_path) if file_path != '.' else '.'
+            dir_cache_key = f"dir_listing:{user_id}:{hashlib.md5(parent_dir.encode()).hexdigest()[:16]}"
+            self.cache_service.delete(dir_cache_key)
+            logger.info(f"清理父目录缓存: {parent_dir} -> {dir_cache_key}")
+            
+            # 清理所有相关的目录列表缓存（使用模式匹配）
+            pattern = "dir_listing:*"
+            cleared_count = self.cache_service.clear_pattern(pattern)
+            logger.info(f"清理目录列表缓存模式: {pattern}, 清理了 {cleared_count} 个键")
+            
+            logger.info(f"上传缓存清理完成，文件路径: {file_path}")
+            
+        except Exception as e:
+            logger.error(f"清理缓存失败: {file_path}, 错误: {e}")
+    
+    def upload_file(self, file, target_directory: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """上传单个文件"""
         start_time = time.time()
         
@@ -105,6 +137,9 @@ class UploadService:
             # 保存文件信息到数据库
             self._save_file_info_to_db(target_path, file_info)
             
+            # 清理相关缓存
+            self._invalidate_cache(target_path, current_user)
+            
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)
             self._log_operation(
@@ -139,7 +174,7 @@ class UploadService:
             )
             raise
     
-    def upload_multiple_files(self, files: List, target_directory: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def upload_multiple_files(self, files: List, target_directory: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """上传多个文件"""
         start_time = time.time()
         
@@ -201,6 +236,9 @@ class UploadService:
                         'filename': file.filename,
                         'error': str(e)
                     })
+            
+            # 清理相关缓存（清理目标目录的缓存）
+            self._invalidate_cache(target_directory, current_user)
             
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)

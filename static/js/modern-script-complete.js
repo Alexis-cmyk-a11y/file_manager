@@ -93,12 +93,12 @@ function updateUserDisplay(username, role) {
 // 初始化事件监听器
 function initializeEventListeners() {
     // 文件操作按钮
-    const uploadBtn = document.getElementById('upload-btn');
+    const smartUploadBtn = document.getElementById('smart-upload-btn');
     const newFolderBtn = document.getElementById('new-folder-btn');
     const fileUploadInput = document.getElementById('file-upload');
     
-    if (uploadBtn) uploadBtn.addEventListener('click', () => fileUploadInput?.click());
-    if (fileUploadInput) fileUploadInput.addEventListener('change', uploadFiles);
+    if (smartUploadBtn) smartUploadBtn.addEventListener('click', () => fileUploadInput?.click());
+    if (fileUploadInput) fileUploadInput.addEventListener('change', smartUploadFiles);
     if (newFolderBtn) newFolderBtn.addEventListener('click', showNewFolderModal);
     
     // 模态框事件
@@ -663,14 +663,14 @@ function updateBreadcrumbForShared() {
 
 // 更新工具栏按钮状态
 function updateToolbarForShared(userPermissions) {
-    const uploadBtn = document.getElementById('upload-btn');
+    const smartUploadBtn = document.getElementById('smart-upload-btn');
     const newFolderBtn = document.getElementById('new-folder-btn');
     const webDownloadBtn = document.getElementById('web-download-btn');
     
     // 在共享视图中，这些操作应该指向用户个人目录
-    if (uploadBtn) {
-        uploadBtn.disabled = false;
-        uploadBtn.title = '上传文件到个人目录';
+    if (smartUploadBtn) {
+        smartUploadBtn.disabled = false;
+        smartUploadBtn.title = '上传文件到个人目录';
     }
     
     if (newFolderBtn) {
@@ -971,8 +971,8 @@ function createFileRow(file, isRecentFiles = false, isFavorites = false, isShare
     const favoriteIcon = isFavorite ? 'fas fa-star' : 'far fa-star';
     const favoriteTitle = isFavorite ? '取消收藏' : '添加到收藏夹';
     
-    // 在收藏页面中，直接使用file.path；在其他页面中，使用currentPath构建路径
-    const filePath = isFavorites ? file.path : (currentPath && currentPath !== '.') ? currentPath + '/' + file.name : file.name;
+    // 在收藏页面中，直接使用file.path；在共享文件页面中，也使用file.path；在其他页面中，使用currentPath构建路径
+    const filePath = (isFavorites || isSharedFile) ? file.path : (currentPath && currentPath !== '.') ? currentPath + '/' + file.name : file.name;
     
     row.innerHTML = `
         <td class="name-col">
@@ -1287,13 +1287,30 @@ function updateSidebarState(path) {
 function downloadFile(path) {
     console.log('下载文件，路径:', path);
     console.log('当前路径:', currentPath);
-    console.log('完整下载URL:', `/api/download?path=${encodeURIComponent(path)}`);
     
-    // 记录文件访问
-    const fileName = path.split('/').pop();
-    recordFileAccess(path, fileName);
-    
-    window.open(`/api/download?path=${encodeURIComponent(path)}`, '_blank');
+    // 检查是否为共享文件（检查路径是否包含_shared）
+    if (path.includes('_shared')) {
+        // 解析共享文件路径
+        const pathParts = path.split('/');
+        const owner = pathParts[0].replace('_shared', '');
+        const filename = pathParts[1];
+        
+        console.log('共享文件下载，所有者:', owner, '文件名:', filename);
+        console.log('完整下载URL:', `/api/download/shared/${owner}/${filename}`);
+        
+        // 记录文件访问
+        recordFileAccess(path, filename);
+        
+        window.open(`/api/download/shared/${owner}/${filename}`, '_blank');
+    } else {
+        console.log('完整下载URL:', `/api/download?path=${encodeURIComponent(path)}`);
+        
+        // 记录文件访问
+        const fileName = path.split('/').pop();
+        recordFileAccess(path, fileName);
+        
+        window.open(`/api/download?path=${encodeURIComponent(path)}`, '_blank');
+    }
 }
 
 function editFile(path) {
@@ -1306,6 +1323,55 @@ function editFile(path) {
     recordFileAccess(path, fileName);
     
     window.open(`/editor?path=${encodeURIComponent(path)}`, '_blank');
+}
+
+// 智能定位菜单函数
+function positionMenuSmartly(menu, event) {
+    // 先让菜单可见以获取实际尺寸
+    menu.style.visibility = 'visible';
+    
+    const menuRect = menu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const menuWidth = menuRect.width;
+    const menuHeight = menuRect.height;
+    
+    // 获取鼠标位置
+    let x = event.clientX;
+    let y = event.clientY;
+    
+    // 水平位置调整
+    if (x + menuWidth > viewportWidth) {
+        // 如果菜单会超出右边界，向左调整
+        x = viewportWidth - menuWidth - 10; // 留10px边距
+    }
+    if (x < 10) {
+        // 确保不会超出左边界
+        x = 10;
+    }
+    
+    // 垂直位置调整
+    if (y + menuHeight > viewportHeight) {
+        // 如果菜单会超出下边界，向上显示
+        y = y - menuHeight - 5; // 在鼠标上方显示，留5px间距
+    }
+    if (y < 10) {
+        // 确保不会超出上边界
+        y = 10;
+    }
+    
+    // 应用最终位置
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    
+    // 添加平滑动画效果
+    menu.style.transition = 'opacity 0.2s ease-out';
+    menu.style.opacity = '0';
+    
+    // 使用 requestAnimationFrame 确保位置设置后再显示
+    requestAnimationFrame(() => {
+        menu.style.opacity = '1';
+    });
 }
 
 function showFileMenu(path, event) {
@@ -1321,10 +1387,10 @@ function showFileMenu(path, event) {
     // 创建上下文菜单
     const menu = document.createElement('div');
     menu.className = 'file-context-menu';
+    
+    // 先设置基本样式，但不设置位置
     menu.style.cssText = `
         position: fixed;
-        top: ${event.clientY}px;
-        left: ${event.clientX}px;
         background: white;
         border: 1px solid #ddd;
         border-radius: 8px;
@@ -1333,6 +1399,7 @@ function showFileMenu(path, event) {
         min-width: 180px;
         padding: 8px 0;
         font-size: 14px;
+        visibility: hidden;
     `;
     
     // 获取文件信息
@@ -1375,7 +1442,18 @@ function showFileMenu(path, event) {
             action: () => editFile(path),
             show: !isDirectory && !isSharedFile  // 共享文件不允许编辑
         },
-
+        {
+            icon: 'fa-copy',
+            text: '复制',
+            action: () => copyFile(path, originalFileName),
+            show: !isSharedFile  // 共享文件不允许复制
+        },
+        {
+            icon: 'fa-cut',
+            text: '剪切',
+            action: () => cutFile(path, originalFileName),
+            show: !isSharedFile  // 共享文件不允许剪切
+        },
         {
             icon: 'fa-share-alt',
             text: '分享到共享',
@@ -1439,6 +1517,9 @@ function showFileMenu(path, event) {
     // 添加到页面
     document.body.appendChild(menu);
     
+    // 智能定位菜单，确保完全可见
+    positionMenuSmartly(menu, event);
+    
     // 点击其他地方关闭菜单
     const closeMenu = (e) => {
         if (!menu.contains(e.target)) {
@@ -1468,7 +1549,22 @@ async function loadFileList() {
         }
         
         console.log('API请求路径:', apiPath);
-        const response = await fetch(`/api/list?path=${encodeURIComponent(apiPath)}`);
+        // 添加多个参数防止缓存
+        const timestamp = new Date().getTime();
+        const random = Math.random().toString(36).substring(7);
+        const apiUrl = `/api/list?path=${encodeURIComponent(apiPath)}&t=${timestamp}&r=${random}&_=${Date.now()}`;
+        console.log('API请求URL:', apiUrl);
+        
+        // 使用强制刷新选项
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
         console.log('API响应状态:', response.status, response.statusText);
         
         if (response.status === 401) {
@@ -1753,6 +1849,145 @@ async function createFolder() {
 }
 
 // 文件上传处理
+// 智能上传函数 - 根据文件大小自动选择上传方式
+async function smartUploadFiles(event) {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+    
+    // 定义大文件阈值 (50MB)
+    const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB
+    
+    // 检查是否有大文件
+    const largeFiles = files.filter(file => file.size > LARGE_FILE_THRESHOLD);
+    const smallFiles = files.filter(file => file.size <= LARGE_FILE_THRESHOLD);
+    
+    console.log('智能上传分析:', {
+        totalFiles: files.length,
+        largeFiles: largeFiles.length,
+        smallFiles: smallFiles.length,
+        largeFileThreshold: LARGE_FILE_THRESHOLD
+    });
+    
+    // 如果只有小文件，使用普通上传
+    if (largeFiles.length === 0) {
+        console.log('使用普通上传方式');
+        await uploadFilesNormal(files);
+        return;
+    }
+    
+    // 如果只有大文件，使用分块上传
+    if (smallFiles.length === 0) {
+        console.log('使用分块上传方式');
+        await uploadFilesChunked(files);
+        return;
+    }
+    
+    // 如果混合文件，分别处理
+    console.log('使用混合上传方式');
+    
+    // 先上传小文件
+    if (smallFiles.length > 0) {
+        showNotification(`正在上传文件...`, 'info');
+        await uploadFilesNormal(smallFiles);
+    }
+    
+    // 再上传大文件
+    if (largeFiles.length > 0) {
+        showNotification(`正在上传文件...`, 'info');
+        await uploadFilesChunked(largeFiles);
+    }
+}
+
+// 普通上传函数
+async function uploadFilesNormal(files) {
+    try {
+        showLoading();
+        
+        const formData = new FormData();
+        files.forEach(file => formData.append('files', file));
+        const targetDir = (currentPath && currentPath !== '') ? currentPath : '.';
+        formData.append('target_directory', targetDir);
+        
+        console.log('普通上传文件信息:', {
+            fileCount: files.length,
+            targetDirectory: targetDir,
+            files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+        });
+        
+        const response = await fetch('/api/upload_multiple', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const uploadedCount = result.uploaded_count || result.success_count || result.uploaded_files?.length || 0;
+            const failedCount = result.failed_count || result.failed_files?.length || 0;
+            
+            let successMessage = `上传成功`;
+            if (uploadedCount > 1) {
+                successMessage = `成功上传 ${uploadedCount} 个文件`;
+            }
+            if (failedCount > 0) {
+                successMessage += `，${failedCount} 个文件失败`;
+            }
+            
+            showNotification(successMessage, 'success');
+            console.log('普通上传成功，准备刷新文件列表，当前路径:', currentPath);
+            
+            // 延迟一点时间确保服务器端文件已写入
+            setTimeout(() => {
+                console.log('延迟刷新文件列表，当前路径:', currentPath);
+                loadFileList();
+            }, 500);
+        } else {
+            throw new Error(result.message || '上传失败');
+        }
+        
+    } catch (error) {
+        console.error('普通上传失败:', error);
+        showNotification(`上传失败: ${error.message}`, 'error');
+    } finally {
+        hideLoading();
+        // 清空文件输入
+        const fileInput = document.getElementById('file-upload');
+        if (fileInput) fileInput.value = '';
+    }
+}
+
+// 分块上传函数
+async function uploadFilesChunked(files) {
+    try {
+        // 显示分块上传模态框
+        const modal = document.getElementById('chunked-upload-modal');
+        modal.style.display = 'flex';
+        
+        // 初始化分块上传UI
+        if (!window.chunkedUploadUI) {
+            window.chunkedUploadUI = new ChunkedUploadUI('chunked-upload-container', {
+                maxFileSize: 1024 * 1024 * 1024, // 1GB
+                showProgress: true,
+                showDetails: true,
+                autoStart: true,
+                targetDirectory: (currentPath && currentPath !== '') ? currentPath : '.'
+            });
+        }
+        
+        // 设置文件到分块上传器
+        window.chunkedUploadUI.setFiles(files);
+        
+    } catch (error) {
+        console.error('分块上传失败:', error);
+        showNotification(`上传失败: ${error.message}`, 'error');
+    }
+}
+
 async function uploadFiles(event) {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
@@ -2005,6 +2240,21 @@ function hideWebDownloadModal() {
     if (overlay) overlay.style.display = 'none';
 }
 
+// 获取预览URL（处理共享文件）
+function getPreviewUrl(path) {
+    // 检查是否为共享文件（检查路径是否包含_shared）
+    if (path.includes('_shared')) {
+        // 解析共享文件路径
+        const pathParts = path.split('/');
+        const owner = pathParts[0].replace('_shared', '');
+        const filename = pathParts[1];
+        
+        return `/api/download/shared/${owner}/${filename}`;
+    } else {
+        return `/api/download?path=${encodeURIComponent(path)}`;
+    }
+}
+
 // 文件操作功能函数
 function previewFile(path, fileName) {
     console.log('预览文件:', path, fileName);
@@ -2210,7 +2460,7 @@ function previewImageFile(path, fileName) {
                     ${fileName}
                 </h3>
             </div>
-            <img src="/api/download?path=${encodeURIComponent(path)}" 
+            <img src="${getPreviewUrl(path)}" 
                  alt="${fileName}" 
                  style="
                     max-width: 100%;
@@ -2319,7 +2569,7 @@ function previewPdfFile(path, fileName) {
                 overflow: hidden;
                 position: relative;
             ">
-                <iframe src="/api/download?path=${encodeURIComponent(path)}" 
+                <iframe src="${getPreviewUrl(path)}" 
                         style="
                             width: 100%;
                             height: 100%;
@@ -2389,7 +2639,7 @@ function previewVideoFile(path, fileName) {
                 border-radius: 8px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             ">
-                <source src="/api/download?path=${encodeURIComponent(path)}" type="video/${fileName.split('.').pop()}">
+                <source src="${getPreviewUrl(path)}" type="video/${fileName.split('.').pop()}">
                 您的浏览器不支持视频播放
             </video>
             <button class="close-preview-btn" style="
@@ -2459,7 +2709,7 @@ function previewAudioFile(path, fileName) {
             </div>
             <div class="preview-body" style="margin-bottom: 32px;">
                 <audio controls style="width: 100%;">
-                    <source src="/api/download?path=${encodeURIComponent(path)}" type="audio/${fileName.split('.').pop()}">
+                    <source src="${getPreviewUrl(path)}" type="audio/${fileName.split('.').pop()}">
                     您的浏览器不支持音频播放
                 </audio>
             </div>
@@ -2729,8 +2979,24 @@ async function deleteFile(path, fileName) {
         
         if (result.success) {
             showNotification(`"${fileName}" 已删除`, 'success');
-            // 重新加载文件列表
+            // 强制刷新文件列表，添加时间戳防止缓存
+            console.log('文件删除成功，强制刷新文件列表，当前路径:', currentPath);
+            console.log('删除的文件路径:', path);
+            
+            // 立即刷新一次
             loadFileList();
+            
+            // 延迟再刷新一次，确保服务器端缓存已清理
+            setTimeout(() => {
+                console.log('延迟刷新文件列表，当前路径:', currentPath);
+                loadFileList();
+            }, 500);
+            
+            // 再次延迟刷新，确保彻底清理
+            setTimeout(() => {
+                console.log('最终刷新文件列表，当前路径:', currentPath);
+                loadFileList();
+            }, 1000);
         } else {
             throw new Error(result.message || '删除失败');
         }
@@ -2812,8 +3078,11 @@ async function deleteSelectedFiles(paths = null) {
         
         showNotification(`成功删除 ${paths.length} 个文件`, 'success');
         
-        // 重新加载文件列表
-        loadFileList();
+        // 强制刷新文件列表
+        console.log('批量删除成功，强制刷新文件列表');
+        setTimeout(() => {
+            loadFileList();
+        }, 100);
         
     } catch (error) {
         console.error('删除文件错误:', error);

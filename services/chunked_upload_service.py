@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from core.config import Config
 from services.mysql_service import get_mysql_service
+from services.cache_service import get_cache_service
 from utils.logger import get_logger
 from utils.file_utils import FileUtils
 
@@ -28,6 +29,7 @@ class ChunkedUploadService:
     def __init__(self):
         self.config = Config()
         self.mysql_service = None
+        self.cache_service = get_cache_service()
         
         # 分块上传配置
         self.chunk_size = 5 * 1024 * 1024  # 5MB 默认块大小，与客户端保持一致
@@ -47,6 +49,33 @@ class ChunkedUploadService:
                 logger.warning("MySQL服务不可用，将跳过数据库日志记录")
         except Exception as e:
             logger.warning(f"MySQL服务初始化失败: {e}")
+    
+    def _invalidate_cache(self, file_path: str, current_user: Dict[str, Any] = None) -> None:
+        """清理相关缓存"""
+        try:
+            import hashlib
+            
+            # 获取用户ID
+            user_id = current_user['user_id'] if current_user else 'anonymous'
+            
+            # 清理文件信息缓存
+            file_cache_key = f"file_info:{user_id}:{hashlib.md5(file_path.encode()).hexdigest()[:16]}"
+            self.cache_service.delete(file_cache_key)
+            logger.debug(f"清理文件信息缓存: {file_path} -> {file_cache_key}")
+            
+            # 清理父目录的目录列表缓存
+            parent_dir = os.path.dirname(file_path) if file_path != '.' else '.'
+            dir_cache_key = f"dir_listing:{user_id}:{hashlib.md5(parent_dir.encode()).hexdigest()[:16]}"
+            self.cache_service.delete(dir_cache_key)
+            logger.debug(f"清理父目录缓存: {parent_dir} -> {dir_cache_key}")
+            
+            # 清理所有相关的目录列表缓存（使用模式匹配）
+            pattern = "dir_listing:*"
+            cleared_count = self.cache_service.clear_pattern(pattern)
+            logger.info(f"清理目录列表缓存模式: {pattern}, 清理了 {cleared_count} 个键")
+            
+        except Exception as e:
+            logger.error(f"清理缓存失败: {file_path}, 错误: {e}")
     
     def _generate_upload_id(self, filename: str, file_size: int, user_id: str) -> str:
         """生成唯一的上传ID"""
@@ -539,6 +568,11 @@ class ChunkedUploadService:
             
             # 清理临时文件
             self._cleanup_upload(upload_id)
+            
+            # 清理相关缓存
+            # 从上传信息中获取用户ID，构建用户信息
+            current_user = {'user_id': upload_info.get('user_id', 'anonymous')}
+            self._invalidate_cache(target_path, current_user)
             
             # 更新上传状态
             upload_info['status'] = 'merged'

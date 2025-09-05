@@ -157,8 +157,23 @@ class CacheService:
         cleared_count = 0
         
         try:
+            import re
+            
+            # 将通配符模式转换为正则表达式
+            if '*' in pattern:
+                # 将 * 转换为 .* 进行正则匹配
+                regex_pattern = pattern.replace('*', '.*')
+                regex = re.compile(regex_pattern)
+            else:
+                # 如果没有通配符，使用简单的字符串包含匹配
+                regex = None
+            
             # 清除内存缓存
-            keys_to_delete = [k for k in self.memory_cache.keys() if pattern in k]
+            if regex:
+                keys_to_delete = [k for k in self.memory_cache.keys() if regex.match(k)]
+            else:
+                keys_to_delete = [k for k in self.memory_cache.keys() if pattern in k]
+            
             for key in keys_to_delete:
                 del self.memory_cache[key]
                 cleared_count += 1
