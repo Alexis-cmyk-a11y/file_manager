@@ -127,10 +127,11 @@ class FileService:
                     directory_path
                 )
             
-            # 处理空路径或"."，转换为当前工作目录
+            # 处理空路径或"."，使用配置的根目录
             if directory_path == "" or directory_path == ".":
-                directory_path = "."
-                actual_path = os.getcwd()
+                # 使用配置的根目录而不是当前工作目录
+                actual_path = self.config.FILESYSTEM_ROOT
+                directory_path = actual_path
             else:
                 actual_path = directory_path
             

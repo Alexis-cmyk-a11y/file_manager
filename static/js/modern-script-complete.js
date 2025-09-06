@@ -57,6 +57,7 @@ async function getCurrentUserInfo() {
                 // 更新用户显示
                 updateUserDisplay(username, '用户');
             } else {
+                // 管理员使用根目录，但让后端处理具体的根目录路径
                 currentPath = '.';  // 管理员使用根目录
                 // 设置管理员初始路径
                 

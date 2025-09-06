@@ -479,23 +479,27 @@ class SecurityService:
             str: 用户的根目录路径
         """
         try:
+            # 获取系统配置的根目录
+            from core.config import config
+            system_root = config.FILESYSTEM_ROOT
+            
             # 管理员可以访问系统根目录
             if user_email == 'admin@system.local':
-                return '.'
+                return system_root
             
             # 获取用户信息
             user_info = self.mysql_service.get_user_by_id(user_id)
             if not user_info:
                 logger.warning(f"用户不存在: {user_id}")
-                return '.'
+                return system_root
             
             # 检查用户角色
             if user_info.get('role') == 'admin':
-                return '.'
+                return system_root
             
             # 普通用户返回自己的目录
             username = user_email.split('@')[0]  # 从邮箱提取用户名
-            user_directory = os.path.join('home', 'users', username)
+            user_directory = os.path.join(system_root, 'home', 'users', username)
             
             # 确保用户目录存在
             if not os.path.exists(user_directory):
@@ -506,7 +510,12 @@ class SecurityService:
             
         except Exception as e:
             logger.error(f"获取用户根目录失败: {e}")
-            return '.'
+            # 回退到配置文件中的根目录
+            try:
+                from core.config import config
+                return config.FILESYSTEM_ROOT
+            except:
+                return '.'
     
     def sanitize_path_for_user(self, user_id: int, user_email: str, directory_path: str) -> str:
         """
@@ -521,18 +530,28 @@ class SecurityService:
             str: 清理后的安全路径
         """
         try:
+            # 获取系统配置的根目录
+            from core.config import config
+            system_root = config.FILESYSTEM_ROOT
+            
             # 管理员可以访问所有路径
             if user_email == 'admin@system.local':
+                # 如果管理员访问根目录，返回系统根目录
+                if directory_path == '.' or directory_path == '':
+                    return system_root
                 return directory_path
             
             # 获取用户信息
             user_info = self.mysql_service.get_user_by_id(user_id)
             if not user_info:
                 logger.warning(f"用户不存在: {user_id}")
-                return '.'
+                return system_root
             
             # 检查用户角色
             if user_info.get('role') == 'admin':
+                # 如果管理员访问根目录，返回系统根目录
+                if directory_path == '.' or directory_path == '':
+                    return system_root
                 return directory_path
             
             # 普通用户路径处理
@@ -545,14 +564,14 @@ class SecurityService:
             
             # 检查是否在用户目录内
             username = user_email.split('@')[0]
-            user_directory = os.path.join('home', 'users', username)
+            user_directory = os.path.join(system_root, 'home', 'users', username)
             normalized_user_directory = os.path.normpath(user_directory)
             
             if normalized_path.startswith(normalized_user_directory):
                 return normalized_path
             
             # 检查是否在共享目录内
-            shared_directory = os.path.join('home', 'shared')
+            shared_directory = os.path.join(system_root, 'home', 'shared')
             normalized_shared_directory = os.path.normpath(shared_directory)
             if normalized_path.startswith(normalized_shared_directory):
                 return normalized_path
