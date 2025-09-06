@@ -52,7 +52,8 @@ def initialize_chunked_upload():
             file_size=file_size,
             user_id=user_id,
             target_directory=target_directory,
-            chunk_size=client_chunk_size  # 传递客户端块大小
+            chunk_size=client_chunk_size,  # 传递客户端块大小
+            current_user=current_user
         )
         
         return jsonify(result)

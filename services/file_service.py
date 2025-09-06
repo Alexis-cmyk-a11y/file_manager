@@ -250,14 +250,12 @@ class FileService:
                 from services.security_service import get_security_service
                 security_service = get_security_service()
                 
-                # 检查用户是否有权限访问该文件
-                directory_path = os.path.dirname(file_path) if file_path != '.' else '.'
-                if not security_service.check_user_directory_access(
+                # 清理和验证用户路径
+                file_path = security_service.sanitize_path_for_user(
                     current_user['user_id'], 
                     current_user['email'], 
-                    directory_path
-                ):
-                    raise PermissionError("没有权限访问该文件")
+                    file_path
+                )
             
             # 生成包含用户信息的缓存键
             user_id = current_user['user_id'] if current_user else 'anonymous'
@@ -335,14 +333,12 @@ class FileService:
                 from services.security_service import get_security_service
                 security_service = get_security_service()
                 
-                # 检查用户是否有权限在该目录创建文件夹
-                parent_directory = os.path.dirname(directory_path) if directory_path != '.' else '.'
-                if not security_service.check_user_directory_access(
+                # 清理和验证用户路径
+                directory_path = security_service.sanitize_path_for_user(
                     current_user['user_id'], 
                     current_user['email'], 
-                    parent_directory
-                ):
-                    raise PermissionError("没有权限在该目录创建文件夹")
+                    directory_path
+                )
             
             # 检查目录是否已存在
             if os.path.exists(directory_path):

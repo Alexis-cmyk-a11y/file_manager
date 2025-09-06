@@ -38,6 +38,17 @@ def download_file():
         
         logger.info(f"用户 {current_user['email']} 下载文件/目录: {file_path}")
         
+        # 用户权限检查和路径清理
+        from services.security_service import get_security_service
+        security_service = get_security_service()
+        
+        # 清理和验证用户路径
+        file_path = security_service.sanitize_path_for_user(
+            current_user['user_id'], 
+            current_user['email'], 
+            file_path
+        )
+        
         download_service = DownloadService()
         
         # 验证下载路径

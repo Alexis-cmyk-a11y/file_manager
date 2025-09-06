@@ -32,6 +32,17 @@ def open_file():
         current_user = get_current_user()
         logger.info(f"用户 {current_user['email']} 打开文件进行编辑: {file_path}")
         
+        # 用户权限检查和路径清理
+        from services.security_service import get_security_service
+        security_service = get_security_service()
+        
+        # 清理和验证用户路径
+        file_path = security_service.sanitize_path_for_user(
+            current_user['user_id'], 
+            current_user['email'], 
+            file_path
+        )
+        
         editor_service = EditorService()
         
         # 检查文件是否可以编辑
@@ -65,6 +76,17 @@ def save_file():
         current_user = get_current_user()
         logger.info(f"用户 {current_user['email']} 保存文件: {file_path}")
         
+        # 用户权限检查和路径清理
+        from services.security_service import get_security_service
+        security_service = get_security_service()
+        
+        # 清理和验证用户路径
+        file_path = security_service.sanitize_path_for_user(
+            current_user['user_id'], 
+            current_user['email'], 
+            file_path
+        )
+        
         editor_service = EditorService()
         
         # 保存文件内容
@@ -89,6 +111,17 @@ def preview_file():
         # 获取当前用户信息
         current_user = get_current_user()
         logger.info(f"用户 {current_user['email']} 预览文件: {file_path}")
+        
+        # 用户权限检查和路径清理
+        from services.security_service import get_security_service
+        security_service = get_security_service()
+        
+        # 清理和验证用户路径
+        file_path = security_service.sanitize_path_for_user(
+            current_user['user_id'], 
+            current_user['email'], 
+            file_path
+        )
         
         editor_service = EditorService()
         result = editor_service.get_file_preview(file_path, max_lines)

@@ -36,6 +36,17 @@ def share_file():
         if not username:
             return jsonify({'success': False, 'message': '无法获取用户信息'}), 400
         
+        # 用户权限检查和路径清理
+        from services.security_service import get_security_service
+        security_service = get_security_service()
+        
+        # 清理和验证用户路径
+        source_path = security_service.sanitize_path_for_user(
+            current_user['user_id'], 
+            current_user['email'], 
+            source_path
+        )
+        
         # 共享文件（使用硬链接）
         sharing_service = get_sharing_service()
         success, message = sharing_service.share_file(username, source_path, target_name)

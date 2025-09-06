@@ -210,9 +210,21 @@ class ChunkedUploadService:
                     logger.info(f"合并进度: {progress:.1f}% ({i+1}/{total_chunks} 块)")
     
     def initialize_upload(self, filename: str, file_size: int, user_id: str, 
-                         target_directory: str = '.', chunk_size: int = None) -> Dict[str, Any]:
+                         target_directory: str = '.', chunk_size: int = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """初始化分块上传"""
         try:
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                target_directory = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    target_directory
+                )
+            
             # 清理过期上传
             self._cleanup_expired_uploads()
             

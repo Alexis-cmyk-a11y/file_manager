@@ -539,6 +539,9 @@ class SecurityService:
                 # 如果管理员访问根目录，返回系统根目录
                 if directory_path == '.' or directory_path == '':
                     return system_root
+                # 如果是相对路径，转换为绝对路径
+                if not os.path.isabs(directory_path):
+                    return os.path.join(system_root, directory_path)
                 return directory_path
             
             # 获取用户信息
@@ -552,6 +555,9 @@ class SecurityService:
                 # 如果管理员访问根目录，返回系统根目录
                 if directory_path == '.' or directory_path == '':
                     return system_root
+                # 如果是相对路径，转换为绝对路径
+                if not os.path.isabs(directory_path):
+                    return os.path.join(system_root, directory_path)
                 return directory_path
             
             # 普通用户路径处理
@@ -559,8 +565,12 @@ class SecurityService:
                 # 根目录访问，重定向到用户目录
                 return self.get_user_root_directory(user_id, user_email)
             
-            # 规范化路径
-            normalized_path = os.path.normpath(directory_path)
+            # 如果是相对路径，先转换为基于用户目录的绝对路径
+            if not os.path.isabs(directory_path):
+                user_root = self.get_user_root_directory(user_id, user_email)
+                normalized_path = os.path.normpath(os.path.join(user_root, directory_path))
+            else:
+                normalized_path = os.path.normpath(directory_path)
             
             # 检查是否在用户目录内
             username = user_email.split('@')[0]

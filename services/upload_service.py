@@ -108,6 +108,18 @@ class UploadService:
             if not FileUtils.is_safe_path(target_directory):
                 raise ValueError("目标目录路径不安全")
             
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                target_directory = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    target_directory
+                )
+            
             # 处理空路径，使用当前工作目录
             if not target_directory or target_directory == '':
                 target_directory = '.'
