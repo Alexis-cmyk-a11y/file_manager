@@ -9,6 +9,7 @@ import requests
 from typing import Dict, Any, Optional, Tuple
 from flask import send_file, Response, request
 from urllib.parse import urlparse
+import re
 
 from core.config import Config
 from services.mysql_service import get_mysql_service
@@ -63,7 +64,7 @@ class DownloadService:
             logger.error(f"记录操作日志失败: {e}")
     
     def download_file(self, file_path: str, user_ip: str = None, user_agent: str = None) -> Response:
-        """下载文件"""
+        """下载文件（支持HTTP Range请求）"""
         start_time = time.time()
         
         try:
@@ -81,6 +82,12 @@ class DownloadService:
             
             # 获取文件信息
             file_info = FileUtils.get_file_info(file_path)
+            file_size = file_info['size']
+            
+            # 检查是否支持Range请求
+            range_header = request.headers.get('Range')
+            if range_header:
+                return self._handle_range_request(file_path, file_info, range_header, user_ip, user_agent)
             
             # 记录操作日志
             duration_ms = int((time.time() - start_time) * 1000)
@@ -95,13 +102,19 @@ class DownloadService:
                 duration_ms=duration_ms
             )
             
-            # 发送文件 - 使用绝对路径确保正确解析
+            # 发送完整文件 - 使用绝对路径确保正确解析
             abs_file_path = os.path.abspath(file_path)
-            return send_file(
+            response = send_file(
                 abs_file_path,
                 as_attachment=True,
                 download_name=file_info['name']
             )
+            
+            # 添加支持Range请求的响应头
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Content-Length'] = str(file_size)
+            
+            return response
             
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
@@ -115,6 +128,91 @@ class DownloadService:
                 duration_ms=duration_ms
             )
             raise
+    
+    def _handle_range_request(self, file_path: str, file_info: Dict[str, Any], 
+                            range_header: str, user_ip: str = None, user_agent: str = None) -> Response:
+        """处理HTTP Range请求（断点续传）"""
+        try:
+            file_size = file_info['size']
+            
+            # 解析Range头
+            range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+            if not range_match:
+                # 无效的Range格式，返回完整文件
+                return self._send_full_file(file_path, file_info, user_ip, user_agent)
+            
+            start = int(range_match.group(1))
+            end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+            
+            # 验证范围
+            if start >= file_size or end >= file_size or start > end:
+                # 范围无效，返回416状态码
+                response = Response('Requested Range Not Satisfiable', status=416)
+                response.headers['Content-Range'] = f'bytes */{file_size}'
+                return response
+            
+            # 调整结束位置
+            end = min(end, file_size - 1)
+            content_length = end - start + 1
+            
+            # 记录操作日志
+            self._log_operation(
+                operation_type='download_range',
+                file_path=file_path,
+                file_name=file_info['name'],
+                file_size=content_length,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                status='success'
+            )
+            
+            # 创建部分内容响应
+            def generate():
+                with open(file_path, 'rb') as f:
+                    f.seek(start)
+                    remaining = content_length
+                    while remaining > 0:
+                        chunk_size = min(8192, remaining)
+                        chunk = f.read(chunk_size)
+                        if not chunk:
+                            break
+                        remaining -= len(chunk)
+                        yield chunk
+            
+            response = Response(
+                generate(),
+                status=206,  # Partial Content
+                headers={
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Range': f'bytes {start}-{end}/{file_size}',
+                    'Content-Length': str(content_length),
+                    'Accept-Ranges': 'bytes',
+                    'Content-Disposition': f'attachment; filename="{file_info["name"]}"'
+                }
+            )
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"处理Range请求失败: {e}")
+            # 如果Range请求处理失败，回退到完整文件下载
+            return self._send_full_file(file_path, file_info, user_ip, user_agent)
+    
+    def _send_full_file(self, file_path: str, file_info: Dict[str, Any], 
+                       user_ip: str = None, user_agent: str = None) -> Response:
+        """发送完整文件"""
+        abs_file_path = os.path.abspath(file_path)
+        response = send_file(
+            abs_file_path,
+            as_attachment=True,
+            download_name=file_info['name']
+        )
+        
+        # 添加支持Range请求的响应头
+        response.headers['Accept-Ranges'] = 'bytes'
+        response.headers['Content-Length'] = str(file_info['size'])
+        
+        return response
     
     def download_directory_as_zip(self, directory_path: str, user_ip: str = None, user_agent: str = None) -> Response:
         """将目录打包为ZIP文件下载"""

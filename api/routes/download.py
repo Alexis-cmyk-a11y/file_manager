@@ -242,12 +242,18 @@ def download_shared_file(owner, filename):
             status='success'
         )
         
-        # 发送文件
-        return send_file(
+        # 发送文件（支持Range请求）
+        response = send_file(
             os.path.abspath(shared_file_path),
             as_attachment=True,
             download_name=filename
         )
+        
+        # 添加支持Range请求的响应头
+        response.headers['Accept-Ranges'] = 'bytes'
+        response.headers['Content-Length'] = str(file_info['size'])
+        
+        return response
         
     except Exception as e:
         logger.error(f"共享文件下载失败: {str(e)}")
