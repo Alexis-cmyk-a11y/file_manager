@@ -289,7 +289,7 @@ frontend:
 
 # 文件系统配置
 filesystem:
-  root_directory: "C:/FileManager/Data"  # 设置你的根目录路径
+  root_directory: "/data/file_manager"  # Linux根目录路径
   upload:
     enabled: true
     chunk_size: 1048576  # 1MB

@@ -133,6 +133,8 @@ class FileService:
                 actual_path = self.config.FILESYSTEM_ROOT
                 directory_path = actual_path
             else:
+                # 清理路径中的多余空格
+                directory_path = directory_path.strip()
                 actual_path = directory_path
             
             # 生成包含用户信息的缓存键
@@ -404,14 +406,12 @@ class FileService:
                 from services.security_service import get_security_service
                 security_service = get_security_service()
                 
-                # 检查用户是否有权限删除该文件
-                directory_path = os.path.dirname(file_path) if file_path != '.' else '.'
-                if not security_service.check_user_directory_access(
+                # 清理和验证用户路径
+                file_path = security_service.sanitize_path_for_user(
                     current_user['user_id'], 
                     current_user['email'], 
-                    directory_path
-                ):
-                    raise PermissionError("没有权限删除该文件")
+                    file_path
+                )
             
             # 检查文件是否存在
             if not os.path.exists(file_path):
@@ -494,6 +494,18 @@ class FileService:
             if not FileUtils.is_safe_path(new_name):
                 raise ValueError("新名称包含不安全字符")
             
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                old_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    old_path
+                )
+            
             # 检查源文件是否存在
             if not os.path.exists(old_path):
                 raise FileNotFoundError("源文件不存在")
@@ -575,6 +587,23 @@ class FileService:
             if not FileUtils.is_safe_path(target_path):
                 raise ValueError("目标路径不安全")
             
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                source_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    source_path
+                )
+                target_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    target_path
+                )
+            
             # 检查源文件是否存在
             if not os.path.exists(source_path):
                 raise FileNotFoundError("源文件不存在")
@@ -652,6 +681,23 @@ class FileService:
             if not FileUtils.is_safe_path(target_path):
                 raise ValueError("目标路径不安全")
             
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                source_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    source_path
+                )
+                target_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    target_path
+                )
+            
             # 检查源文件是否存在
             if not os.path.exists(source_path):
                 raise FileNotFoundError("源文件不存在")
@@ -712,7 +758,7 @@ class FileService:
             )
             raise
     
-    def search_files(self, search_path: str, query: str, user_ip: str = None, user_agent: str = None) -> Dict[str, Any]:
+    def search_files(self, search_path: str, query: str, user_ip: str = None, user_agent: str = None, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """搜索文件"""
         start_time = time.time()
         
@@ -723,6 +769,18 @@ class FileService:
             
             if not query or len(query.strip()) == 0:
                 raise ValueError("搜索查询不能为空")
+            
+            # 用户权限检查
+            if current_user:
+                from services.security_service import get_security_service
+                security_service = get_security_service()
+                
+                # 清理和验证用户路径
+                search_path = security_service.sanitize_path_for_user(
+                    current_user['user_id'], 
+                    current_user['email'], 
+                    search_path
+                )
             
             # 执行搜索
             results = []

@@ -265,7 +265,7 @@ def search_files():
         logger.info(f"用户 {current_user['email']} 搜索文件: {search_path}, 查询: {query}")
         
         file_service = FileService()
-        result = file_service.search_files(search_path, query, user_ip, user_agent)
+        result = file_service.search_files(search_path, query, user_ip, user_agent, current_user)
         
         return jsonify(result)
         
