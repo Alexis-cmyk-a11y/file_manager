@@ -185,17 +185,23 @@ class FileUtils:
         
         # 检查是否为绝对路径，但允许项目内部的绝对路径
         if os.path.isabs(path):
-            # 获取当前工作目录
-            current_dir = os.getcwd()
-            # 检查路径是否在当前工作目录内
+            # 获取系统配置的根目录
             try:
-                # 将路径转换为绝对路径并规范化
+                from core.config import config
+                system_root = config.FILESYSTEM_ROOT
+                # 检查路径是否在系统根目录内
                 abs_path = os.path.abspath(path)
-                # 检查是否在当前工作目录内
-                if not abs_path.startswith(current_dir):
+                if not abs_path.startswith(system_root):
                     return False
             except:
-                return False
+                # 如果无法获取配置，使用当前工作目录作为备选
+                current_dir = os.getcwd()
+                try:
+                    abs_path = os.path.abspath(path)
+                    if not abs_path.startswith(current_dir):
+                        return False
+                except:
+                    return False
         
         # 暂时禁用系统目录检查
         # TODO: 后续需要重新启用并优化检查逻辑

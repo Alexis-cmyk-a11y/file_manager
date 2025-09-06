@@ -99,16 +99,27 @@ class EditorService:
     def read_file_content(self, file_path: str) -> Dict[str, any]:
         """读取文件内容"""
         try:
-            # 处理共享文件路径
-            if '_shared/' in file_path:
-                # 共享文件路径格式：owner_shared/filename
-                abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+            # 如果已经是绝对路径，直接使用
+            if os.path.isabs(file_path):
+                abs_path = file_path
             else:
-                abs_path = os.path.join(self.root_dir, file_path)
+                # 处理共享文件路径
+                if '_shared/' in file_path:
+                    # 共享文件路径格式：owner_shared/filename
+                    abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+                else:
+                    abs_path = os.path.join(self.root_dir, file_path)
             
-            # 安全检查：确保文件路径在根目录内
-            if not os.path.abspath(abs_path).startswith(os.path.abspath(self.root_dir)):
-                raise ValueError("文件路径超出允许范围")
+            # 安全检查：确保文件路径在系统根目录内
+            try:
+                from core.config import config
+                system_root = config.FILESYSTEM_ROOT
+                if not os.path.abspath(abs_path).startswith(os.path.abspath(system_root)):
+                    raise ValueError("文件路径超出允许范围")
+            except:
+                # 如果无法获取配置，使用默认检查
+                if not os.path.abspath(abs_path).startswith(os.path.abspath(self.root_dir)):
+                    raise ValueError("文件路径超出允许范围")
             
             if not os.path.exists(abs_path):
                 raise FileNotFoundError("文件不存在")
@@ -175,11 +186,22 @@ class EditorService:
                     'message': '共享文件不允许编辑'
                 }
             
-            abs_path = os.path.join(self.root_dir, file_path)
+            # 如果已经是绝对路径，直接使用
+            if os.path.isabs(file_path):
+                abs_path = file_path
+            else:
+                abs_path = os.path.join(self.root_dir, file_path)
             
-            # 安全检查：确保文件路径在根目录内
-            if not os.path.abspath(abs_path).startswith(os.path.abspath(self.root_dir)):
-                raise ValueError("文件路径超出允许范围")
+            # 安全检查：确保文件路径在系统根目录内
+            try:
+                from core.config import config
+                system_root = config.FILESYSTEM_ROOT
+                if not os.path.abspath(abs_path).startswith(os.path.abspath(system_root)):
+                    raise ValueError("文件路径超出允许范围")
+            except:
+                # 如果无法获取配置，使用默认检查
+                if not os.path.abspath(abs_path).startswith(os.path.abspath(self.root_dir)):
+                    raise ValueError("文件路径超出允许范围")
             
             # 创建目录（如果不存在）
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)
@@ -221,12 +243,16 @@ class EditorService:
     def get_file_preview(self, file_path: str, max_lines: int = 100) -> Dict[str, any]:
         """获取文件预览（前几行）"""
         try:
-            # 处理共享文件路径
-            if '_shared/' in file_path:
-                # 共享文件路径格式：owner_shared/filename
-                abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+            # 如果已经是绝对路径，直接使用
+            if os.path.isabs(file_path):
+                abs_path = file_path
             else:
-                abs_path = os.path.join(self.root_dir, file_path)
+                # 处理共享文件路径
+                if '_shared/' in file_path:
+                    # 共享文件路径格式：owner_shared/filename
+                    abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+                else:
+                    abs_path = os.path.join(self.root_dir, file_path)
             
             if not os.path.exists(abs_path):
                 raise FileNotFoundError("文件不存在")
@@ -264,12 +290,16 @@ class EditorService:
     def search_in_file(self, file_path: str, search_term: str, case_sensitive: bool = False) -> Dict[str, any]:
         """在文件中搜索文本"""
         try:
-            # 处理共享文件路径
-            if '_shared/' in file_path:
-                # 共享文件路径格式：owner_shared/filename
-                abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+            # 如果已经是绝对路径，直接使用
+            if os.path.isabs(file_path):
+                abs_path = file_path
             else:
-                abs_path = os.path.join(self.root_dir, file_path)
+                # 处理共享文件路径
+                if '_shared/' in file_path:
+                    # 共享文件路径格式：owner_shared/filename
+                    abs_path = os.path.join(self.root_dir, 'home', 'shared', file_path)
+                else:
+                    abs_path = os.path.join(self.root_dir, file_path)
             
             if not os.path.exists(abs_path):
                 raise FileNotFoundError("文件不存在")

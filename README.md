@@ -19,6 +19,12 @@
 
 ## 🚀 快速开始
 
+### 系统要求
+- **Python**: 3.8+
+- **数据库**: MySQL 5.7+
+- **缓存**: Redis 6.0+
+- **操作系统**: Windows, Linux, macOS
+
 ### 安装依赖
 ```bash
 pip install -r requirements.txt
@@ -44,6 +50,27 @@ python main.py
 
 ### 默认账户
 - **管理员**: admin@system.local / Asdasd123
+
+## 🐧 Linux 部署
+
+### 快速部署
+```bash
+# 运行 Linux 部署脚本
+chmod +x scripts/setup_linux.sh
+./scripts/setup_linux.sh
+```
+
+### 手动部署
+1. 安装系统依赖：`sudo apt-get install python3 python3-pip mysql-server redis-server nginx`
+2. 配置数据库和 Redis
+3. 修改 `config/config.yaml` 中的路径配置
+4. 运行初始化脚本：`python scripts/init_database.py`
+5. 启动应用：`python main.py`
+
+### 生产环境
+- 使用 systemd 管理服务
+- 配置 Nginx 反向代理
+- 启用 HTTPS 和防火墙
 
 ## 📖 主要功能
 

@@ -269,7 +269,7 @@ class MySQLService:
         sql = """
         CREATE TABLE IF NOT EXISTS file_operations (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            operation_type ENUM('upload', 'download', 'delete', 'rename', 'move', 'copy', 'create_folder', 'list_directory', 'get_file_info', 'search') NOT NULL,
+            operation_type ENUM('upload', 'download', 'delete', 'rename', 'move', 'copy', 'create_folder', 'list_directory', 'get_file_info', 'search', 'delete_folder', 'download_range', 'web_download', 'delete_downloaded_file', 'unknown') NOT NULL,
             file_path VARCHAR(1000),
             file_name VARCHAR(255),
             file_size BIGINT,
